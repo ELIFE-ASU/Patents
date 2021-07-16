@@ -200,38 +200,59 @@ def get_cpd_patent_relations(data_fp):
 def main():
     ### Read in data ###
 
-    # #Build list of all unique compounds & patents, as well as dictionaries with dates
-    get_cpd_patent_info("Data/SureChemblMAP/")
+    # # #Build list of all unique compounds & patents, as well as dictionaries with dates
+    # get_cpd_patent_info("Data/SureChemblMAP/")
 
-    # #Build edge list (cpd, patent)
-    print("\n\n--- Edges --- \n")
-    get_cpd_patent_relations("Data/SureChemblMAP/")
+    # # #Build edge list (cpd, patent)
+    # print("\n\n--- Edges --- \n")
+    # get_cpd_patent_relations("Data/SureChemblMAP/")
 
-    # # ### Create graph ###
-    # # #Note - takes ~90GB and ~20 minutes to build the full network
-    # G = build_network(
-    #     pickle.load(
-    #         file=open("Data/CpdPatentIdsDates/unique_cpds_2021.p", "rb")),
-    #     pickle.load(
-    #         file=open("Data/CpdPatentIdsDates/unique_patents_2021.p", "rb")),
-    #     pickle.load(
-    #         file=open("Data/CpdPatentIdsDates/cpd_date_dict_2021.p", "rb")),
-    #     pickle.load(
-    #         file=open("Data/CpdPatentIdsDates/patent_date_dict_2021.p", "rb")),
-    #     pickle.load(
-    #         file=open("Data/CpdPatentIdsDates/cpd_patent_edges_2021.p", "rb")))
+    # ### Create graph ###
+    # #Note - takes ~90GB and ~20 minutes to build the full network
 
-    # pickle.dump(G, file=open("Data/Graphs/G_full_2021.p", "wb"))
+    #List of all quarterly updates (avoids initial data dump)
+    updates = [
+        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
+        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
+        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
+        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+    ]
+    test = ["20150401"]
+    with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
+        print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
+        for update in updates:
+            print("--- Building:", update, "---")
+            G = build_network(
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/unique_cpds" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/unique_patents" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/cpd_date_dict" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/patent_date_dict" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
+                    ".p", "rb")))
 
-    # ### Cpd & Patent subgraphs ###
-    # #Test with 2021 network first
-    # G = pickle.load(file=open("Data/Graphs/G_full_2021.p", "rb"))
-    # G_cpd, G_patent = G.bipartite_projection()
+            pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
 
-    # print("--- Compound Projection --- ")
-    # print(ig.summary(G_cpd), end="\n\n")
-    # print("--- Patent projection ---")
-    # print(ig.summary(G_patent))
+            ### Cpd & Patent subgraphs ###
+            # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
+            # pickle.dump(G_cpd,
+            #             file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
+            # pickle.dump(G_patent,
+            #             file=open("Data/Graphs/G_patent_" + update + ".p", "wb"))
+            #Test size (for possible later projections)
+            sizes = G.bipartite_projection_size()
+            print(sizes)
+            print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
+                  str(sizes[2]) + "," + str(sizes[3]),
+                  file=f)
 
 
 if __name__ == "__main__":
