@@ -1,6 +1,6 @@
 """ Builds a bipartite network of the SureChEMBL database
 
-Reads in cpd & patent data (ids & dates) from SureChEMBL data 
+Reads in cpd & patent data (ids & dates) from SureChEMBL data
 in Data\SureChemBLMAP directory. Builds a bipartite network of cpds & patents,
 dates associated, with cpds connected to patents if a cpd appears in a patent.
 The earliest date of entry (both cpd & patent) is used.
@@ -14,6 +14,12 @@ import numpy as np
 import time
 from tqdm import tqdm
 import os
+from collections import defaultdict
+from itertools import combinations
+from itertools import islice
+from itertools import repeat
+from multiprocessing import Pool
+from functools import partial
 
 
 def read_data(fp):
@@ -23,7 +29,7 @@ def read_data(fp):
 
     Args:
         fp: filepath to .txt file containing SureChemBL data
-    
+
     Returns:
         A pandas dataframe with three columns and N rows. All rows are represented as strings.
     """
@@ -36,7 +42,7 @@ def read_data(fp):
 def get_ids_dates(df, c, id_date_dict, unique_ids):
     """ Gets data (ids & dates) from SureChemBL dataframe
 
-    Builds a list of unique ids, and a dictionary of ids associated with the earliest date of entry. 
+    Builds a list of unique ids, and a dictionary of ids associated with the earliest date of entry.
     Applied to both compounds or patents.
 
     Args:
@@ -65,11 +71,12 @@ def get_ids_dates(df, c, id_date_dict, unique_ids):
     return unique_ids, id_date_dict
 
 
-def build_network(cpds, patents, cpd_date_dict, patent_date_dict, edges):
+def build_bipartite_network(cpds, patents, cpd_date_dict, patent_date_dict,
+                            edges):
     """ Builds the igraph network of cpds & patents.
 
     Takes compounds, patents, and associated dates to build a bipartite igraph network. Compounds are linked
-    to patents if a compound appears in a specific patent. Type (cpd vs patent) is specified through 
+    to patents if a compound appears in a specific patent. Type (cpd vs patent) is specified through
     the "type" variable.
 
     Args:
@@ -115,7 +122,7 @@ def build_network(cpds, patents, cpd_date_dict, patent_date_dict, edges):
 def get_cpd_patent_info(data_fp):
     """ Saves compound and patent information from SureChemBL mapping
 
-    Reads in all SureChemBL mapping data and creates lists of all unique compounds & patents, as well as 
+    Reads in all SureChemBL mapping data and creates lists of all unique compounds & patents, as well as
     dictionaries which link compounds and patents to the earliest data of entry.
 
     Args:
@@ -123,7 +130,7 @@ def get_cpd_patent_info(data_fp):
 
     Returns:
         None, but saves all data to pickle files to "Data/CpdPatentIdsDates" directory
-    
+
     """
 
     for f in os.listdir(data_fp):  #full dataset
@@ -169,32 +176,128 @@ def get_cpd_patent_relations(data_fp):
 
     Relates compounds to patents where they appear. The data structure used is a list of tuples
     in (cpd, patent) form, with the ids of cpds & patents used as unique identifiers.
+    Also relates patents to all compounds which appear in them. This is a dictionary in
+    {patent: [cpds]} form, also with ids as unique identifiers.
 
     Args:
         data_fp: filepath to SureChemBL mapping
 
     Returns:
         None, but saves all data to pickle files to "Data/CpdPatentIdsDates" directory
-    
+
     """
 
-    for f in os.listdir(data_fp):
-        #f = "SureChEMBL_map_20210101.txt"  #test case
-        ## Note: list definition should be outside for loop for full dataset
-        cpd_patent_edges = []
+    # for f in os.listdir(data_fp): #Full network
+    f = "SureChEMBL_map_20210101.txt"  #test case
+    ## Note: list definition should be outside for loop for full dataset
+    cpd_patent_edges = []
+    patent_cpd_edges = defaultdict(list)
 
-        print("---- Analzying", f, "----")
-        df = read_data(data_fp + f)
+    print("---- Analzying", f, "----")
+    df = read_data(data_fp + f)
 
-        #Extent an existing list of tuples, each tuple is a relation between (cpd, patent)
-        cpd_patent_edges.extend(
-            list(set([t for t in list(zip(df["cpdID"], df["patentID"]))])))
+    #Extend an existing list of tuples, each tuple is a relation between (cpd, patent)
+    cpd_patent_edges.extend(
+        list(set([t for t in list(zip(df["cpdID"], df["patentID"]))])))
 
-        ## Note: pickle dump should be outside for loop for full dataset
-        pickle.dump(cpd_patent_edges,
-                    file=open(
-                        "Data/CpdPatentIdsDates/cpd_patent_edges" + f[15:-4] +
-                        ".p", "wb"))
+    #Builds a dictionary of {patent: [cpd]} relations
+    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
+        patent_cpd_edges[row["patentID"]].append(row["cpdID"])
+
+    ## Note: pickle dump should be outside for loop for full dataset
+    pickle.dump(cpd_patent_edges,
+                file=open(
+                    "Data/CpdPatentIdsDates/cpd_patent_edges" + f[15:-4] + ".p",
+                    "wb"))
+
+    pickle.dump(patent_cpd_edges,
+                file=open(
+                    "Data/CpdPatentIdsDates/patent_cpd_edges" + f[15:-4] + ".p",
+                    "wb"))
+
+
+def build_cpd_network(cpds, cpd_date_dict, patent_cpd_links):
+    """ Builds a network of compounds, connected by occurrence within the same patent.
+
+    Builds a igraph network with SureChemBL compounds as nodes, and edges between compounds
+    are created when two compounds appear in the same patent together.
+
+    Args:
+        cpds: list of all unique compounds in SureChemBL
+        cpd_date_dict: all compounds associated with date of first entry
+        patent_cpd_links: finds all compounds associated with each patent
+
+    Returns:
+        an igraph network of SureChemBL compounds
+
+    """
+    G = ig.Graph()
+
+    ### Add nodes ###
+    G.add_vertices(len(cpds))
+    G.vs["name"] = cpds  #name field is the respective cpd/patent ID
+
+    #Add dates to each node
+    all_dates = []
+    for cpd in cpds:
+        all_dates.append(cpd_date_dict[cpd])
+    G.vs["date"] = all_dates
+
+    ### Add vertices ###
+    pool = Pool(processes=10)
+    patent_cpd_slice = dict(islice(patent_cpd_links.items(), 100))
+    # print(patent_cpd_slice)
+
+    # slices = zip(repeat(G), patent_cpd_slice.values())
+    # for s in slices:
+    #     print(s)
+    start = time.time()
+    graphs = pool.map(partial(find_cpd_cpd_edges, G), patent_cpd_slice.values())
+
+    for graph in tqdm(graphs):
+        G.add_edges(graph.get_edgelist())
+
+    print("Took:", time.time() - start)
+
+    # print("Adding edges...")
+    # for es in tqdm(edges):
+    #     G.add_edges(list(es))
+
+    print(ig.summary(G))
+    return G
+
+
+def find_cpd_cpd_edges(graph, patent_cpds):
+    """" Adds edges to an igraph network G
+
+    Takes a dictionary of patent-cpd links in {patent: [cpds]} form, adds edges between
+    all compounds associated with a single patent. Meant to be called in parallel from
+    build_cpd_network().
+
+    Args:
+        G: igraph network, with nodes as compounds
+        patent_cpd_links: dictionary of all compounds associated with patents
+
+    Returns:
+        igraph network with edges between compounds
+
+    """
+    #try:  #TODO: assert that patent_cpd_links is a dictionary
+    #Take advantage of O(1) lookup of graphs
+    # print(list(set(patent_cpds)))
+    linked_cpds_indicies = [
+        graph.vs.find(c).index for c in list(set(patent_cpds))
+    ]
+    # print(linked_cpds_indicies)
+    #Add edges between all possible combinations of nodes found within a patent
+    graph.add_edges(list(combinations(linked_cpds_indicies, 2)))
+    print(ig.summary(graph))
+
+    return graph
+
+    # else:
+    #     print("Not a dictionary", type(patent_cpd_links))
+    #     print(patent_cpd_links)
 
 
 def main():
@@ -203,56 +306,74 @@ def main():
     # # #Build list of all unique compounds & patents, as well as dictionaries with dates
     # get_cpd_patent_info("Data/SureChemblMAP/")
 
-    # # #Build edge list (cpd, patent)
+    # #Build edge list (cpd, patent)
     # print("\n\n--- Edges --- \n")
     # get_cpd_patent_relations("Data/SureChemblMAP/")
 
-    # ### Create graph ###
-    # #Note - takes ~90GB and ~20 minutes to build the full network
+    ### Create cpd-patent graph ###
+    #Note - takes ~90GB and ~20 minutes to build the full network
 
-    #List of all quarterly updates (avoids initial data dump)
-    updates = [
-        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
-    ]
-    test = ["20150401"]
-    with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
-        print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
-        for update in updates:
-            print("--- Building:", update, "---")
-            G = build_network(
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/unique_cpds" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/unique_patents" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/cpd_date_dict" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/patent_date_dict" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
-                    ".p", "rb")))
+    # #List of all quarterly updates (avoids initial data dump)
+    # updates = [
+    #     "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
+    #     "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
+    #     "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
+    #     "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+    # ]
+    # test = ["20210101"]
+    # with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
+    #     print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
+    #     for update in updates:
+    #         print("--- Building:", update, "---")
+    #         G = build_bipartite_network(
+    #             pickle.load(file=open(
+    #                 "Data/CpdPatentIdsDates/unique_cpds" + update +
+    #                 ".p", "rb")),
+    #             pickle.load(file=open(
+    #                 "Data/CpdPatentIdsDates/unique_patents" + update +
+    #                 ".p", "rb")),
+    #             pickle.load(file=open(
+    #                 "Data/CpdPatentIdsDates/cpd_date_dict" + update +
+    #                 ".p", "rb")),
+    #             pickle.load(file=open(
+    #                 "Data/CpdPatentIdsDates/patent_date_dict" + update +
+    #                 ".p", "rb")),
+    #             pickle.load(file=open(
+    #                 "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
+    #                 ".p", "rb")))
 
-            pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
+    #         pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
 
-            ### Cpd & Patent subgraphs ###
-            # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
-            # pickle.dump(G_cpd,
-            #             file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
-            # pickle.dump(G_patent,
-            #             file=open("Data/Graphs/G_patent_" + update + ".p", "wb"))
-            #Test size (for possible later projections)
-            sizes = G.bipartite_projection_size()
-            print(sizes)
-            print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
-                  str(sizes[2]) + "," + str(sizes[3]),
-                  file=f)
+    #         ### Cpd & Patent subgraphs ###
+    #         # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
+    #         # pickle.dump(G_cpd,
+    #         #             file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
+    #         # pickle.dump(G_patent,
+    #         #             file=open("Data/Graphs/G_patent_" + update + ".p", "wb"))
+    #         #Test size (for possible later projections)
+    #         sizes = G.bipartite_projection_size()
+    #         print(sizes)
+    #         print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
+    #               str(sizes[2]) + "," + str(sizes[3]),
+    #               file=f)
+
+    ### Build cpd-cpd graph ###
+    test = ["20210101"]
+    for update in test:
+        print("--- Building:", update, "---")
+        G = build_cpd_network(
+            pickle.load(
+                file=open("Data/CpdPatentIdsDates/unique_cpds" + update +
+                          ".p", "rb")),
+            pickle.load(file=open(
+                "Data/CpdPatentIdsDates/cpd_date_dict" + update + ".p", "rb")),
+            pickle.load(file=open(
+                "Data/CpdPatentIdsDates/patent_cpd_edges" + update +
+                ".p", "rb")))
+
+        pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
+
+        #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
 
 
 if __name__ == "__main__":
