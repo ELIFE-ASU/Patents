@@ -171,7 +171,7 @@ def get_cpd_patent_info(data_fp):
                         ".p", "wb"))
 
 
-def get_cpd_patent_relations(data_fp):
+def get_cpd_patent_relations(data_fp, update):
     """ Builds a relation between compounds and patents
 
     Relates compounds to patents where they appear. The data structure used is a list of tuples
@@ -181,15 +181,14 @@ def get_cpd_patent_relations(data_fp):
 
     Args:
         data_fp: filepath to SureChemBL mapping
+        update: file extension of the specific SureChemBL update
 
     Returns:
         None, but saves all data to pickle files to "Data/CpdPatentIdsDates" directory
 
     """
 
-    # for f in os.listdir(data_fp): #Full network
-    f = "SureChEMBL_map_20210101.txt"  #test case
-    ## Note: list definition should be outside for loop for full dataset
+    f = "SureChEMBL_map_" + update + ".txt"  #update file
     cpd_patent_edges = []
     patent_cpd_edges = defaultdict(list)
 
@@ -244,20 +243,33 @@ def build_cpd_network(cpds, cpd_date_dict, patent_cpd_links):
     G.vs["date"] = all_dates
 
     ### Add vertices ###
-    pool = Pool(processes=10)
-    patent_cpd_slice = dict(islice(patent_cpd_links.items(), 100))
+    # pool = Pool(processes=10)
+    # patent_cpd_slice = dict(islice(patent_cpd_links.items(), 1000))
     # print(patent_cpd_slice)
 
-    # slices = zip(repeat(G), patent_cpd_slice.values())
-    # for s in slices:
-    #     print(s)
-    start = time.time()
-    graphs = pool.map(partial(find_cpd_cpd_edges, G), patent_cpd_slice.values())
+    ## Note: serial attempt
+    c = 0  #loop counter
+    es = []
+    for s in tqdm(patent_cpd_links.values()):
+        if c < 10000:  #Every 10k loops, add edges to the graph (otherwise store them)
+            es.extend(find_cpd_cpd_edges(G, s))
+            c += 1
+        else:
+            G.add_edges(es)
+            es = []  #Reset the counter and edge list
+            c = 0
 
-    for graph in tqdm(graphs):
-        G.add_edges(graph.get_edgelist())
+    #Add any extra edges4
+    G.add_edges(es)
 
-    print("Took:", time.time() - start)
+    ## Note: parallel attempts
+    # start = time.time()
+    # graphs = pool.map(partial(find_cpd_cpd_edges, G), patent_cpd_slice.values())
+
+    # for graph in tqdm(graphs):
+    #     G.add_edges(graph.get_edgelist())
+
+    # print("Took:", time.time() - start)
 
     # print("Adding edges...")
     # for es in tqdm(edges):
@@ -282,18 +294,20 @@ def find_cpd_cpd_edges(graph, patent_cpds):
         igraph network with edges between compounds
 
     """
-    #try:  #TODO: assert that patent_cpd_links is a dictionary
+    #try:  #TODO: assert that patent_cpd is a list
     #Take advantage of O(1) lookup of graphs
-    # print(list(set(patent_cpds)))
     linked_cpds_indicies = [
         graph.vs.find(c).index for c in list(set(patent_cpds))
     ]
-    # print(linked_cpds_indicies)
-    #Add edges between all possible combinations of nodes found within a patent
-    graph.add_edges(list(combinations(linked_cpds_indicies, 2)))
-    print(ig.summary(graph))
+    return list(combinations(linked_cpds_indicies, 2))
 
-    return graph
+    # ## Note: parallel attempt to add edges directly to G
+    # # print(linked_cpds_indicies)
+    # #Add edges between all possible combinations of nodes found within a patent
+    # graph.add_edges(list(combinations(linked_cpds_indicies, 2)))
+    # print(ig.summary(graph))
+
+    # return graph
 
     # else:
     #     print("Not a dictionary", type(patent_cpd_links))
@@ -303,23 +317,25 @@ def find_cpd_cpd_edges(graph, patent_cpds):
 def main():
     ### Read in data ###
 
+    #List of all quarterly updates (avoids initial data dump)
+    updates = [
+        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
+        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
+        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
+        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+    ]
+
     # # #Build list of all unique compounds & patents, as well as dictionaries with dates
     # get_cpd_patent_info("Data/SureChemblMAP/")
 
-    # #Build edge list (cpd, patent)
-    # print("\n\n--- Edges --- \n")
-    # get_cpd_patent_relations("Data/SureChemblMAP/")
+    # # #Build edge list (cpd, patent)
+    # print("--- Edges --- \n")
+    # for update in updates:
+    #     get_cpd_patent_relations("Data/SureChemblMAP/", update)
 
     ### Create cpd-patent graph ###
     #Note - takes ~90GB and ~20 minutes to build the full network
 
-    # #List of all quarterly updates (avoids initial data dump)
-    # updates = [
-    #     "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-    #     "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-    #     "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-    #     "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
-    # ]
     # test = ["20210101"]
     # with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
     #     print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
@@ -359,7 +375,8 @@ def main():
 
     ### Build cpd-cpd graph ###
     test = ["20210101"]
-    for update in test:
+    print("\n\n --- Building Graphs --- \n")
+    for update in updates:
         print("--- Building:", update, "---")
         G = build_cpd_network(
             pickle.load(
@@ -370,8 +387,10 @@ def main():
             pickle.load(file=open(
                 "Data/CpdPatentIdsDates/patent_cpd_edges" + update +
                 ".p", "rb")))
-
-        pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
+s
+        # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
+        G.save("Data/Graphs/G_cpd_" + update + ".gmlz",
+               format="graphmlz")  #save in zipped-gml format to save memory
 
         #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
 
