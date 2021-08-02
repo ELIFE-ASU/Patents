@@ -7,6 +7,7 @@ The earliest date of entry (both cpd & patent) is used.
 
 """
 
+from numpy.lib.shape_base import split
 import igraph as ig
 import pickle
 import pandas as pd
@@ -171,7 +172,7 @@ def get_cpd_patent_info(data_fp):
                         ".p", "wb"))
 
 
-def get_cpd_patent_relations(data_fp, update):
+def get_cpd_patent_relations(df, label):
     """ Builds a relation between compounds and patents
 
     Relates compounds to patents where they appear. The data structure used is a list of tuples
@@ -180,20 +181,15 @@ def get_cpd_patent_relations(data_fp, update):
     {patent: [cpds]} form, also with ids as unique identifiers.
 
     Args:
-        data_fp: filepath to SureChemBL mapping
-        update: file extension of the specific SureChemBL update
+        df: dataframe containing SureChemBL map data
 
     Returns:
         None, but saves all data to pickle files to "Data/CpdPatentIdsDates" directory
 
     """
 
-    f = "SureChEMBL_map_" + update + ".txt"  #update file
     cpd_patent_edges = []
     patent_cpd_edges = defaultdict(list)
-
-    print("---- Analzying", f, "----")
-    df = read_data(data_fp + f)
 
     #Extend an existing list of tuples, each tuple is a relation between (cpd, patent)
     cpd_patent_edges.extend(
@@ -206,12 +202,12 @@ def get_cpd_patent_relations(data_fp, update):
     ## Note: pickle dump should be outside for loop for full dataset
     pickle.dump(cpd_patent_edges,
                 file=open(
-                    "Data/CpdPatentIdsDates/cpd_patent_edges" + f[15:-4] + ".p",
+                    "Data/CpdPatentIdsDates/cpd_patent_edges" + label + ".p",
                     "wb"))
 
     pickle.dump(patent_cpd_edges,
                 file=open(
-                    "Data/CpdPatentIdsDates/patent_cpd_edges" + f[15:-4] + ".p",
+                    "Data/CpdPatentIdsDates/patent_cpd_edges" + label + ".p",
                     "wb"))
 
 
@@ -317,26 +313,38 @@ def find_cpd_cpd_edges(graph, patent_cpds):
 def main():
     ### Read in data ###
 
-    #List of all quarterly updates (avoids initial data dump)
-    updates = [
-        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
-    ]
+    # #List of all quarterly updates (avoids initial data dump)
+    # updates = [
+    #     "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
+    #     "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
+    #     "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
+    #     "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+    # ]
+    # test = ["20141231"]
+    # # # #Build list of all unique compounds & patents, as well as dictionaries with dates
+    # # get_cpd_patent_info("Data/SureChemblMAP/")
 
-    # # #Build list of all unique compounds & patents, as well as dictionaries with dates
-    # get_cpd_patent_info("Data/SureChemblMAP/")
+    # # # #Build edge list (cpd, patent)
+    # # print("--- Edges --- \n")
+    # for update in test:
+    #     f = "Data/SureChemblMAP/SureChEMBL_map_" + update + ".txt"  #update file
+    #     print("---- Analzying", f, "----")
+    #     df = read_data(f)
+    #     print(len(df))
+    #     df = df.sort_values(by=["Date"])
+    #     print(df.head())
+    #     print(len(df) /
+    #           5500000)  #Use 5.5 million as the split for pre-2014 data
 
-    # # #Build edge list (cpd, patent)
-    # print("--- Edges --- \n")
-    # for update in updates:
-    #     get_cpd_patent_relations("Data/SureChemblMAP/", update)
+    #     count = 0
+    #     for df_split in np.array_split(df, len(df) / 5500000):
+    #         print("---- Analyzing split", count, "----")
+    #         get_cpd_patent_relations(df_split, update + "_" + str(count))
+    #         count += 1
 
     ### Create cpd-patent graph ###
     #Note - takes ~90GB and ~20 minutes to build the full network
 
-    # test = ["20210101"]
     # with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
     #     print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
     #     for update in updates:
@@ -374,23 +382,26 @@ def main():
     #               file=f)
 
     ### Build cpd-cpd graph ###
-    test = ["20210101"]
+    test = ["20141231"]
     print("\n\n --- Building Graphs --- \n")
-    for update in updates:
+    for update in test:
         print("--- Building:", update, "---")
-        G = build_cpd_network(
-            pickle.load(
-                file=open("Data/CpdPatentIdsDates/unique_cpds" + update +
-                          ".p", "rb")),
-            pickle.load(file=open(
-                "Data/CpdPatentIdsDates/cpd_date_dict" + update + ".p", "rb")),
-            pickle.load(file=open(
-                "Data/CpdPatentIdsDates/patent_cpd_edges" + update +
-                ".p", "rb")))
-s
-        # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
-        G.save("Data/Graphs/G_cpd_" + update + ".gmlz",
-               format="graphmlz")  #save in zipped-gml format to save memory
+        for c in range(17, 38):  # len(pre-2014 data) / 5.5 million = 38
+            G = build_cpd_network(
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/unique_cpds" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/cpd_date_dict" + update +
+                    ".p", "rb")),
+                pickle.load(file=open(
+                    "Data/CpdPatentIdsDates/patent_cpd_edges" + update + "_" +
+                    str(c) + ".p", "rb")))
+
+            # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
+            G.save("Data/Graphs/G_cpd_" + update + "_" + str(c) + ".gmlz",
+                   format="graphmlz")  #save in zipped-gml format to save memory
+            del (G)  #remove G from memory to free up space
 
         #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
 
