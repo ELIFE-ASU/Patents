@@ -11,6 +11,7 @@ import numpy as np
 import pickle
 from itertools import islice
 from itertools import zip_longest
+from itertools import accumulate
 import time
 import os
 from tqdm import tqdm
@@ -138,50 +139,76 @@ def get_degree_distributions():
     pickle.dump(avg, file=open("Data/Degrees/avg_degree_list.p", "wb"))
 
 
-def calculate_preferential_attachment():
-    """ Calculates preferential attachment index (see Rednar 2004) for SureChemBL degrees
+def link_id_degrees(full_id_degrees, id_degrees, i, bins):
+    """ Puts the ids of specific updates/times into a full dictionary of id-[degrees]
 
-    Uses data stored in the 'Data/Degrees/id_degrees_*' files to build a preferential
-    attachment index. Saves both the full list of id:degree pairs (summed over time)
-    and the preferential attachment indicies of each degree to pickle files in
-    'Data/Degrees' directory
+    Takes in a specific update (id_degrees), and adds the degrees present in that
+    update to the full id:degree dictionary. The degrees are a list of len(bins),
+    and each item is the sum of the previous item and the total provided in id_degrees.
+
+    Args:
+        full_id_degrees (dictionary): links a SureChemBL id with a list of degrees
+            over time. The degrees are added together as they increase.
+        id_degrees (dictionary): links a SureChemBL id with a specific degree from
+            a specific update.
+        i (int): the increment of the specific update, provides the necessary place
+            for the full_id_degrees dictionary
+        bins (int): number of updates
+
+    Returns:
+        full_id_degrees: updated full dictionary of id:[degrees]
+        i: updated increment
     """
-    print("\n----- Building id-degree dictionary -----\n")
-    full_id_degrees = {}
-    size = 63  #there are 63 unique update files
+    for key, value in id_degrees.items():
+        #If a id is in the dictionary, update the appropriate degree value
+        if key in full_id_degrees:
+            full_id_degrees[key][i] = value
+        # If a id is not in the dictionary, add it with a list of len(updates) 0s and update the appropriate degree value
+        else:
+            full_id_degrees[key] = [0] * bins
+            full_id_degrees[key][i] = value
 
-    i = 0
-    for f in tqdm(os.listdir("Data/Degrees/")):
-        if f.startswith("id_degrees_"):
-            #Load id_degree dictionary
-            id_degrees = pickle.load(file=open("Data/Degrees/" + f, "rb"))
+    return full_id_degrees, i + 1
 
-            # TODO Add / update to full dictionary.
 
-            for key, value in id_degrees.items():
-                #If a id is in the dictionary, update the appropriate degree value
-                if key in full_id_degrees:
-                    full_id_degrees[key][i] = sum(full_id_degrees[key]) + value
-                # If a id is not in the dictionary, add it with a list of len(updates) 0s and update the appropriate degree value
-                else:
-                    full_id_degrees[key] = [0] * size
-                    full_id_degrees[key][i] = value
-            i += 1
+def replace_zeroes(full_id_degrees):
+    """Replaces all zero values using itertools.accumulate()
 
-    print(list(islice(full_id_degrees.items(), 10)))
+    Takea the full dictionary of id:[degree], then finds the cumulative sum
+    across the entire list of degrees and replaces the original degree list with
+    this cumulative list (for preferential attachment purposes)
 
-    #Replace all zero values with the last non-zero value
+    Args:
+        full_id_degrees (dictionary): links a SureChemBL id with a list of degrees
+            over time. The degrees are added together as they increase
+
+    Returns:
+        full_id_degrees: full dictionary with cumulative sums as degree list
+    """
+    #Finds cumulative sum of values
     print("\n----- Replacing zero values -----\n")
     for key, value in tqdm(full_id_degrees.items()):
-        arr = np.array(value)
-        prev = np.arange(len(arr))
-        prev[arr == 0] = 0
-        prev = np.maximum.accumulate(prev)
-        full_id_degrees[key] = arr[prev]
-    pickle.dump(full_id_degrees,
-                file=open("Data/Degrees/full_id_degrees.p", "wb"))
+        cum_value = list(accumulate(value))
+        full_id_degrees[key] = cum_value
 
-    #Calculate preferential attachment
+    return full_id_degrees
+
+
+def pref_attachment_calculation(full_id_degrees):
+    """ Calculates preferential attachment over a list of degrees
+
+    Given a list of increasing degrees associated with each SureChemBL id, the
+    preferential attachment index sum(value[n+1] - value[n]), over all n is calculated
+
+    Args:
+        full_id_degrees (dictionary): links a SureChemBL id with a list of degrees
+            over time. The degrees are added together as they increase
+
+    Returns:
+        pref_attach_dict: associated a preferential attachment index with each
+            SureChemBL ID
+    """
+
     print("\n----- Calculating preferential attachment -----\n")
     pref_attach_dict = {}
     for key, value in tqdm(full_id_degrees.items()):
@@ -191,8 +218,65 @@ def calculate_preferential_attachment():
             attachments.append(value[c + 1] - value[c])
             c += 1
         pref_attach_dict[key] = np.mean(attachments)
+
+    return pref_attach_dict
+
+
+def calculate_full_preferential_attachment():
+    """ Calculates preferential attachment index (see Rednar 2004) for SureChemBL degrees
+    across all patents
+
+    Uses data stored in the 'Data/Degrees/id_degrees_*' files to build a preferential
+    attachment index. Saves both the full list of id:degree pairs (summed over time)
+    and the preferential attachment indicies of each degree to pickle files in
+    'Data/Degrees' directory
+    """
+    print("\n----- Building id-degree dictionary -----\n")
+    full_id_degrees = {}
+    bins = 63  #there are 63 unique update files
+
+    i = 0
+    for f in tqdm(os.listdir("Data/Degrees/")):
+        if f.startswith("id_degrees_"):
+            #Load id_degree dictionary
+            id_degrees = pickle.load(file=open("Data/Degrees/" + f, "rb"))
+
+            full_id_degrees, i = link_id_degrees(full_id_degrees, id_degrees, i,
+                                                 bins)
+
+    print(list(islice(full_id_degrees.items(), 10)))
+
+    full_id_degrees = replace_zeroes(full_id_degrees)
+
+    print(list(islice(full_id_degrees.items(), 10)))
+
+    pickle.dump(full_id_degrees,
+                file=open("Data/Degrees/full_id_degrees.p", "wb"))
+
+    pref_attach_dict = pref_attachment_calculation(full_id_degrees)
     pickle.dump(pref_attach_dict,
                 file=open("Data/Degrees/pref_attach_dict.p", "wb"))
+
+
+def calculate_range_preferential_attachment(start, end):
+    """Calculates the preferential attachement for a range of dates
+
+    Based off Redner 2004, calculates preferential attachment over a specific
+    date range. Saves files to /Data/Degrees directory.
+
+    Args:
+        start (string): Start date of preferential attachment calculations. Should
+            be in form YYYY-MM-DD
+        end (string): End date, informat YYYY-MM-DD
+    """
+
+    #TODO: automatically generate files which need to be read in
+
+    #Read in first pre-2015 update
+    full_id_degrees = pickle.load(
+        file=open("Data/Degrees/id_degrees_20141231_0.p", "rb"))
+
+    print(list(islice(full_id_degrees.items(), 10)))
 
 
 def main():
@@ -200,10 +284,13 @@ def main():
     #get_degrees_from_graphs()
 
     #Store all degree distributions in a single list
-    get_degree_distributions()
+    #get_degree_distributions()
 
     #Calculate preferential attachment index for entire SureChemBL dataset
-    calculate_preferential_attachment()
+    #calculate_full_preferential_attachment()
+
+    #Calculate preferential attachment for a specific range of dates
+    calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import time
+import datetime
 from tqdm import tqdm
 import os
 from collections import defaultdict
@@ -21,6 +22,7 @@ from itertools import islice
 from itertools import repeat
 from multiprocessing import Pool
 from functools import partial
+import calendar
 
 
 def read_data(fp):
@@ -134,8 +136,18 @@ def get_cpd_patent_info(data_fp):
 
     """
 
-    for f in os.listdir(data_fp):  #full dataset
-        # f = "SureChEMBL_map_20210101.txt"  #test case
+    # #List of all quarterly updates (avoids initial data dump)
+    #TODO: code skipped 20150401 for some reason
+    updates = [
+        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
+        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
+        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
+        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+    ]
+    test = ["20150401"]
+    for update in updates:  # in os.listdir(data_fp):  #full dataset
+        f = "SureChEMBL_map_" + update + ".txt"
+
         ## Note: variable declarations should be outside the for loop for full dataset analysis
         cpds = []
         cpd_dates = {}
@@ -145,31 +157,41 @@ def get_cpd_patent_info(data_fp):
         print("---- Analzying", f, "----")
         df = read_data(data_fp + f)
 
-        cpds, cpd_dates = get_ids_dates(df, "cpdID", cpd_dates, cpds)
-        print("Current unique cpds:", len(cpds))
+        months = get_all_months(df["Date"].iloc[0], df["Date"].iloc[-1])
 
-        patents, patent_dates = get_ids_dates(df, "patentID", patent_dates,
-                                              patents)
-        print("Current unique patents:", len(patents))
+        for month in months:
+            criterion = df["Date"].map(lambda x: x.startswith(month[:-2]))
+            split = df[criterion]
+            print("\n----- Building", month[:-3], "-----")
 
-        #Save cpds & patents (including dictionaries)
-        ## Note: pickle dumps *should* be outside the for loop for full dataset analysis
-        pickle.dump(cpds,
-                    file=open(
-                        "Data/CpdPatentIdsDates/unique_cpds" + f[15:-4] + ".p",
-                        "wb"))
-        pickle.dump(
-            cpd_dates,
-            file=open("Data/CpdPatentIdsDates/cpd_date_dict" + f[15:-4] + ".p",
-                      "wb"))
-        pickle.dump(
-            patents,
-            file=open("Data/CpdPatentIdsDates/unique_patents" + f[15:-4] + ".p",
-                      "wb"))
-        pickle.dump(patent_dates,
-                    file=open(
-                        "Data/CpdPatentIdsDates/patent_date_dict" + f[15:-4] +
-                        ".p", "wb"))
+            print("-- Unique Cpds --")
+            cpds, cpd_dates = get_ids_dates(split, "cpdID", cpd_dates, cpds)
+
+            print("-- Unique Patents --")
+            patents, patent_dates = get_ids_dates(split, "patentID",
+                                                  patent_dates, patents)
+
+            #Build patent-cpd relationships for each month
+            get_cpd_patent_relations(split, "_" + month[:-3])
+
+            #Save cpds & patents (including dictionaries)
+            ## Note: pickle dumps *should* be outside the for loop for full dataset analysis
+            pickle.dump(cpds,
+                        file=open(
+                            "Data/CpdPatentIdsDates/unique_cpds_" + month[:-3] +
+                            ".p", "wb"))
+            pickle.dump(cpd_dates,
+                        file=open(
+                            "Data/CpdPatentIdsDates/cpd_date_dict_" +
+                            month[:-3] + ".p", "wb"))
+            pickle.dump(patents,
+                        file=open(
+                            "Data/CpdPatentIdsDates/unique_patents_" +
+                            month[:-3] + ".p", "wb"))
+            pickle.dump(patent_dates,
+                        file=open(
+                            "Data/CpdPatentIdsDates/patent_date_dict_" +
+                            month[:-3] + ".p", "wb"))
 
 
 def get_cpd_patent_relations(df, label):
@@ -196,6 +218,7 @@ def get_cpd_patent_relations(df, label):
         list(set([t for t in list(zip(df["cpdID"], df["patentID"]))])))
 
     #Builds a dictionary of {patent: [cpd]} relations
+    print("-- Cpd-patent Edges --")
     for index, row in tqdm(df.iterrows(), total=df.shape[0]):
         patent_cpd_edges[row["patentID"]].append(row["cpdID"])
 
@@ -310,100 +333,110 @@ def find_cpd_cpd_edges(graph, patent_cpds):
     #     print(patent_cpd_links)
 
 
+def subtract_month(date):
+    """ Subtracts one month from a given date
+
+    Args:
+        date (string, in form YYYY-MM-DD): date to be subtracted from
+
+    Returns:
+        (string, in form YYYY-MM-DD): date after subtracting one month. The
+        number of days is the maximum number of days in that particular month.
+    """
+    date = datetime.datetime.strptime(date, "%Y-%m-%d")
+    month = date.month - 2
+    month = month % 12 + 1
+    year = date.year - month // 12
+    day = calendar.monthrange(year, month)[-1]
+    return datetime.date(year, month, day).strftime("%Y-%m-%d")
+
+
+def get_all_months(start, end):
+    """Build a list of all months within a given range.
+
+    Takes a range of dates from a dataframe, then builds a list of all months
+    from that range in the form YYYY-MM-DD, where DD is the last day of each month
+
+    Args:
+        start (string, in form YYYY-MM-DD): start date
+        end ((string, in form YYYY-MM-DD)): end date
+
+    Returns:
+        range (list): list of dates in YYYY-MM-DD format
+    """
+    months = []
+    while end > start:
+        months.append(end)
+        end = subtract_month(end)
+    return months
+
+
 def main():
     ### Read in data ###
 
-    # #List of all quarterly updates (avoids initial data dump)
-    # updates = [
-    #     "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-    #     "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-    #     "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-    #     "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
-    # ]
-    # test = ["20141231"]
-    # # # #Build list of all unique compounds & patents, as well as dictionaries with dates
-    # # get_cpd_patent_info("Data/SureChemblMAP/")
-
-    # # # #Build edge list (cpd, patent)
-    # # print("--- Edges --- \n")
-    # for update in test:
-    #     f = "Data/SureChemblMAP/SureChEMBL_map_" + update + ".txt"  #update file
-    #     print("---- Analzying", f, "----")
-    #     df = read_data(f)
-    #     print(len(df))
-    #     df = df.sort_values(by=["Date"])
-    #     print(df.head())
-    #     print(len(df) /
-    #           5500000)  #Use 5.5 million as the split for pre-2014 data
-
-    #     count = 0
-    #     for df_split in np.array_split(df, len(df) / 5500000):
-    #         print("---- Analyzing split", count, "----")
-    #         get_cpd_patent_relations(df_split, update + "_" + str(count))
-    #         count += 1
+    # #Build list of all unique compounds & patents, as well as dictionaries with dates
+    get_cpd_patent_info("Data/SureChemblMAP/")
 
     ### Create cpd-patent graph ###
     #Note - takes ~90GB and ~20 minutes to build the full network
 
-    # with open("Data/Graphs/bipartite_sizes.csv", "a") as f:
-    #     print("date,cpd_nodes,cpd_edges,patent_nodes,patent_edges", file=f)
-    #     for update in updates:
-    #         print("--- Building:", update, "---")
-    #         G = build_bipartite_network(
+    # for update in updates:
+    #     print("--- Building:", update, "---")
+    #     G = build_bipartite_network(
+    #         pickle.load(file=open(
+    #             "Data/CpdPatentIdsDates/unique_cpds" + update +
+    #             ".p", "rb")),
+    #         pickle.load(file=open(
+    #             "Data/CpdPatentIdsDates/unique_patents" + update +
+    #             ".p", "rb")),
+    #         pickle.load(file=open(
+    #             "Data/CpdPatentIdsDates/cpd_date_dict" + update +
+    #             ".p", "rb")),
+    #         pickle.load(file=open(
+    #             "Data/CpdPatentIdsDates/patent_date_dict" + update +
+    #             ".p", "rb")),
+    #         pickle.load(file=open(
+    #             "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
+    #             ".p", "rb")))
+
+    #     pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
+
+    ### Cpd & Patent subgraphs ###
+    # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
+    # pickle.dump(G_cpd,
+    #             file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
+    # pickle.dump(G_patent,
+    #             file=open("Data/Graphs/G_patent_" + update + ".p", "wb"))
+    # #Test size (for possible later projections)
+    # sizes = G.bipartite_projection_size()
+    # print(sizes)
+    # print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
+    #         str(sizes[2]) + "," + str(sizes[3]),
+    #         file=f)
+
+    # ### Build cpd-cpd graph ###
+    # test = ["20141231"]
+    # print("\n\n --- Building Graphs --- \n")
+    # for update in test:
+    #     print("--- Building:", update, "---")
+    #     for c in range(17, 38):  # len(pre-2014 data) / 5.5 million = 38
+    #         G = build_cpd_network(
     #             pickle.load(file=open(
     #                 "Data/CpdPatentIdsDates/unique_cpds" + update +
-    #                 ".p", "rb")),
-    #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/unique_patents" + update +
     #                 ".p", "rb")),
     #             pickle.load(file=open(
     #                 "Data/CpdPatentIdsDates/cpd_date_dict" + update +
     #                 ".p", "rb")),
     #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/patent_date_dict" + update +
-    #                 ".p", "rb")),
-    #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
-    #                 ".p", "rb")))
+    #                 "Data/CpdPatentIdsDates/patent_cpd_edges" + update + "_" +
+    #                 str(c) + ".p", "rb")))
 
-    #         pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
+    #         # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
+    #         G.save("Data/Graphs/G_cpd_" + update + "_" + str(c) + ".gmlz",
+    #                format="graphmlz")  #save in zipped-gml format to save memory
+    #         del (G)  #remove G from memory to free up space
 
-    #         ### Cpd & Patent subgraphs ###
-    #         # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
-    #         # pickle.dump(G_cpd,
-    #         #             file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
-    #         # pickle.dump(G_patent,
-    #         #             file=open("Data/Graphs/G_patent_" + update + ".p", "wb"))
-    #         #Test size (for possible later projections)
-    #         sizes = G.bipartite_projection_size()
-    #         print(sizes)
-    #         print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
-    #               str(sizes[2]) + "," + str(sizes[3]),
-    #               file=f)
-
-    ### Build cpd-cpd graph ###
-    test = ["20141231"]
-    print("\n\n --- Building Graphs --- \n")
-    for update in test:
-        print("--- Building:", update, "---")
-        for c in range(17, 38):  # len(pre-2014 data) / 5.5 million = 38
-            G = build_cpd_network(
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/unique_cpds" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/cpd_date_dict" + update +
-                    ".p", "rb")),
-                pickle.load(file=open(
-                    "Data/CpdPatentIdsDates/patent_cpd_edges" + update + "_" +
-                    str(c) + ".p", "rb")))
-
-            # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
-            G.save("Data/Graphs/G_cpd_" + update + "_" + str(c) + ".gmlz",
-                   format="graphmlz")  #save in zipped-gml format to save memory
-            del (G)  #remove G from memory to free up space
-
-        #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
+    #     #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
 
 
 if __name__ == "__main__":
