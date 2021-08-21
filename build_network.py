@@ -145,7 +145,7 @@ def get_cpd_patent_info(data_fp):
         "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
     ]
     test = ["20150401"]
-    for update in updates:  # in os.listdir(data_fp):  #full dataset
+    for update in test:  # in os.listdir(data_fp):  #full dataset
         f = "SureChEMBL_map_" + update + ".txt"
 
         ## Note: variable declarations should be outside the for loop for full dataset analysis
