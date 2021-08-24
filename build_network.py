@@ -23,6 +23,7 @@ from itertools import repeat
 from multiprocessing import Pool
 from functools import partial
 import calendar
+import subprocess
 
 
 def read_data(fp):
@@ -60,7 +61,7 @@ def get_ids_dates(df, c, id_date_dict, unique_ids):
     #Find unique compounds
     unique_ids = list(set(df[c].tolist() + unique_ids))
 
-    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
+    for index, row in df.iterrows():  #, total=df.shape[0]:
         #Add ID if not present in database
         if row[c] not in id_date_dict:
             id_date_dict[row[c]] = row["Date"]
@@ -139,27 +140,31 @@ def get_cpd_patent_info(data_fp):
     # #List of all quarterly updates (avoids initial data dump)
     #TODO: code skipped 20150401 for some reason
     updates = [
-        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
+        "20141231", "20150401", "20150701", "20151001", "20160101", "20160401",
+        "20160701", "20161001", "20170101", "20170401", "20170701", "20171001",
+        "20180101", "20180401", "20180701", "20181001", "20190101", "20190401",
+        "20190701", "20191001", "20200101", "20200401", "20200701", "20201001",
+        "20210101"
     ]
-    test = ["20150401"]
+    test = ["20141231"]
+    test = ["20150401"]  #Testing Agave
     for update in test:  # in os.listdir(data_fp):  #full dataset
         f = "SureChEMBL_map_" + update + ".txt"
 
-        ## Note: variable declarations should be outside the for loop for full dataset analysis
-        cpds = []
-        cpd_dates = {}
-        patents = []
-        patent_dates = {}
-
         print("---- Analzying", f, "----")
         df = read_data(data_fp + f)
+        df = df.sort_values(by=["Date"])
+        print(df.head())
 
         months = get_all_months(df["Date"].iloc[0], df["Date"].iloc[-1])
 
         for month in months:
+            ## Note: variable declarations should be outside the for loop for full dataset analysis
+            cpds = []
+            cpd_dates = {}
+            patents = []
+            patent_dates = {}
+
             criterion = df["Date"].map(lambda x: x.startswith(month[:-2]))
             split = df[criterion]
             print("\n----- Building", month[:-3], "-----")
@@ -178,20 +183,29 @@ def get_cpd_patent_info(data_fp):
             ## Note: pickle dumps *should* be outside the for loop for full dataset analysis
             pickle.dump(cpds,
                         file=open(
-                            "Data/CpdPatentIdsDates/unique_cpds_" + month[:-3] +
-                            ".p", "wb"))
-            pickle.dump(cpd_dates,
-                        file=open(
-                            "Data/CpdPatentIdsDates/cpd_date_dict_" +
+                            "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" +
                             month[:-3] + ".p", "wb"))
-            pickle.dump(patents,
-                        file=open(
-                            "Data/CpdPatentIdsDates/unique_patents_" +
-                            month[:-3] + ".p", "wb"))
-            pickle.dump(patent_dates,
-                        file=open(
-                            "Data/CpdPatentIdsDates/patent_date_dict_" +
-                            month[:-3] + ".p", "wb"))
+            pickle.dump(
+                cpd_dates,
+                file=open(
+                    "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" +
+                    month[:-3] + ".p", "wb"))
+            pickle.dump(
+                patents,
+                file=open(
+                    "/scratch/jmalloy3/CpdPatentIdsDates/unique_patents_" +
+                    month[:-3] + ".p", "wb"))
+            pickle.dump(
+                patent_dates,
+                file=open(
+                    "/scratch/jmalloy3/CpdPatentIdsDates/patent_date_dict_" +
+                    month[:-3] + ".p", "wb"))
+
+            # Move all files to Google Drive
+            subprocess.run([
+                "rclone", "moveto", "/scratch/jmalloy3/CpdPatentIdsDates",
+                "SureChemBL_Patents:CpdPatentIdsDates"
+            ])
 
 
 def get_cpd_patent_relations(df, label):
@@ -218,20 +232,20 @@ def get_cpd_patent_relations(df, label):
         list(set([t for t in list(zip(df["cpdID"], df["patentID"]))])))
 
     #Builds a dictionary of {patent: [cpd]} relations
-    print("-- Cpd-patent Edges --")
-    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
+    print("-- Cpd-Patent Edges --")
+    for index, row in df.iterrows():  #, total=df.shape[0]:
         patent_cpd_edges[row["patentID"]].append(row["cpdID"])
 
     ## Note: pickle dump should be outside for loop for full dataset
     pickle.dump(cpd_patent_edges,
                 file=open(
-                    "Data/CpdPatentIdsDates/cpd_patent_edges" + label + ".p",
-                    "wb"))
+                    "/scratch/jmalloy3/CpdPatentIdsDates/cpd_patent_edges" +
+                    label + ".p", "wb"))
 
     pickle.dump(patent_cpd_edges,
                 file=open(
-                    "Data/CpdPatentIdsDates/patent_cpd_edges" + label + ".p",
-                    "wb"))
+                    "/scratch/jmalloy3/CpdPatentIdsDates/patent_cpd_edges" +
+                    label + ".p", "wb"))
 
 
 def build_cpd_network(cpds, cpd_date_dict, patent_cpd_links):
@@ -269,7 +283,7 @@ def build_cpd_network(cpds, cpd_date_dict, patent_cpd_links):
     ## Note: serial attempt
     c = 0  #loop counter
     es = []
-    for s in tqdm(patent_cpd_links.values()):
+    for s in patent_cpd_links.values():
         if c < 10000:  #Every 10k loops, add edges to the graph (otherwise store them)
             es.extend(find_cpd_cpd_edges(G, s))
             c += 1
@@ -368,6 +382,7 @@ def get_all_months(start, end):
     while end > start:
         months.append(end)
         end = subtract_month(end)
+
     return months
 
 
