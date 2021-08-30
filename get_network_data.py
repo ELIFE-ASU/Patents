@@ -14,7 +14,7 @@ from itertools import zip_longest
 from itertools import accumulate
 import time
 import os
-from tqdm import tqdm
+import subprocess
 
 
 def get_degrees(G):
@@ -47,18 +47,21 @@ def read_cpdcpd_graph(update):
     """ Reads a cpd-cpd graph in .gmlz format
 
     Takes a stored igraph network in .gmlz format and reads it into igraph form.
-    Assumes that the data are stored in the Data/Graphs/ directory and in the format
+    Assumes that the data are stored in the /scratch/jmalloy3/Graphs/ directory and in the format
     G_cpd_<update>.gmlz.
 
     Args:
-        update (string): date (YYYYMMDD) of SureChemBL data dump
+        fp (string): filepath to a specific cpd-cpd graph
 
     Returns:
         G (igraph object): cpd-cpd network pertaining to a specific update
     """
-    G = ig.Graph.Read_GraphMLz("Data/Graphs/G_cpd_" + update + ".gmlz")
-    print("Loaded gml")
-    #print(ig.summary(G))
+    # TODO: read in pickled files, instead of gmlz
+    fp = "/scratch/jmalloy3/Graphs/G_cpd_" + update + ".gmlz"
+    print(fp)
+    G = ig.Graph.Read_GraphMLz(fp)
+    print("Loaded graph:", update)
+    print(ig.summary(G))
 
     # #One time function - to save all gmlz files as pickles to save time
     # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb"))
@@ -70,45 +73,80 @@ def read_cpdcpd_graph(update):
     return G
 
 
-def get_degrees_from_graphs():
-    """Finds all degrees and id:degree pairs from SureChemBL cpd-cpd graphs
+def get_network_stats(start, stop):
+    """Finds basic network statistics SureChemBL cpd-cpd graphs in a given range
 
-    Assumes all quarterly graphs are in 'Data/Graphs/', saves all degree lists
-    and id:degree pairs to pickle files in 'Data/Degrees/' directory
+    Calculates num nodes, num edges, avg degree, max degree, diameter, avg path length,
+    avg clustering coefficient, num clusters, largest connected component size
+
+    Args:
+        start (int): year of starting point for analysis
+        end (int): year of ending point (inclusive)
+
+    Returns:
+        (none): writes a file containing the basic network statistics for each month
+                in a given myself
     """
-    #List of all quarterly updates (avoids initial data dump)
-    updates = [
-        "20150401", "20150701", "20151001", "20160101", "20160401", "20160701",
-        "20161001", "20170101", "20170401", "20170701", "20171001", "20180101",
-        "20180401", "20180701", "20181001", "20190101", "20190401", "20190701",
-        "20191001", "20200101", "20200401", "20200701", "20201001", "20210101"
-    ]
-    test = ["20141231"]
-    for update in test:
-        for i in range(39):  #All pre-20141231 updates
-            start = time.time()
-            print("--- Analyzing:", update, i, "---")
-            G = read_cpdcpd_graph(update + "_" + str(i))
 
-            degrees = get_degrees(G)
-            id_degrees = get_id_degree(G)
-            del (G)
-            print("Avg Degree:", np.mean(degrees))
-            pickle.dump(degrees,
-                        file=open(
-                            "Data/Degrees/degrees_" + update + "_" + str(i) +
-                            ".p", "wb"))
+    print(start, stop)
+    updates = build_month_list(start, stop)
 
-            pickle.dump(id_degrees,
-                        file=open(
-                            "Data/Degrees/id_degrees_" + update + "_" + str(i) +
-                            ".p", "wb"))
+    for update in updates:
+        subprocess.run([
+            "rclone",
+            "copy",
+            "SureChemBL_Patents:Graphs/G_cpd_" + update + ".gmlz",
+            "/scratch/jmalloy3/Graphs/",
+        ])
 
-            print("Time:", time.time() - start)
-            del (degrees)
-            del (id_degrees)
+        read_cpdcpd_graph(update)
 
-        print()
+    # for update in test:
+    #     for i in range(39):  #All pre-20141231 updates
+    #         start = time.time()
+    #         print("--- Analyzing:", update, i, "---")
+    #         G = read_cpdcpd_graph(update + "_" + str(i))
+
+    #         degrees = get_degrees(G)
+    #         id_degrees = get_id_degree(G)
+    #         del (G)
+    #         print("Avg Degree:", np.mean(degrees))
+    #         pickle.dump(degrees,
+    #                     file=open(
+    #                         "Data/Degrees/degrees_" + update + "_" + str(i) +
+    #                         ".p", "wb"))
+
+    #         pickle.dump(id_degrees,
+    #                     file=open(
+    #                         "Data/Degrees/id_degrees_" + update + "_" + str(i) +
+    #                         ".p", "wb"))
+
+    #         print("Time:", time.time() - start)
+    #         del (degrees)
+    #         del (id_degrees)
+
+    #     print()
+
+
+def build_month_list(start, end):
+    """ Builds a list of all months in a given range
+
+    Args:
+        start (int): year describing the start of the data
+        end (int): year describing the end of the data (inclusive)
+
+    Returns:
+        list: list of all update months in format "YYYY-MM"
+    """
+    updates = []
+    for year in range(start, end + 1):  # all years through the given end
+        for month in range(1, 13):  #include 12 months
+            if month < 10:
+                updates.append(str(year) + "-0" + str(month))
+            else:
+                updates.append(str(year) + "-" + str(month))
+
+    return updates
 
 
 def get_degree_distributions():
@@ -280,8 +318,8 @@ def calculate_range_preferential_attachment(start, end):
 
 
 def main():
-    #Calculate and save degrees & id:degree pairs from SureChemBL updates
-    #get_degrees_from_graphs()
+    #Calculate basic high-level network stats from SureChemBL updates
+    get_network_stats(2020, 2020)
 
     #Store all degree distributions in a single list
     #get_degree_distributions()
@@ -290,7 +328,7 @@ def main():
     #calculate_full_preferential_attachment()
 
     #Calculate preferential attachment for a specific range of dates
-    calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
+    #calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
 
 
 if __name__ == "__main__":

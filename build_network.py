@@ -119,7 +119,7 @@ def build_bipartite_network(cpds, patents, cpd_date_dict, patent_date_dict,
             (G.vs.find(edge[0]).index, G.vs.find(edge[1]).index))
     G.add_edges(indexed_edges)
 
-    print(ig.summary(G))
+    #print(ig.summary(G))
     return G
 
 
@@ -148,7 +148,7 @@ def get_cpd_patent_info(data_fp):
     ]
     test = ["20141231"]
     test = ["20150401"]  #Testing Agave
-    for update in test:  # in os.listdir(data_fp):  #full dataset
+    for update in updates:  # in os.listdir(data_fp):  #full dataset
         f = "SureChEMBL_map_" + update + ".txt"
 
         print("---- Analzying", f, "----")
@@ -308,7 +308,7 @@ def build_cpd_network(cpds, cpd_date_dict, patent_cpd_links):
     # for es in tqdm(edges):
     #     G.add_edges(list(es))
 
-    print(ig.summary(G))
+    #print(ig.summary(G))
     return G
 
 
@@ -386,35 +386,105 @@ def get_all_months(start, end):
     return months
 
 
+def build_month_list(start, end):
+    """ Builds a list of all months in a given range
+
+    Args:
+        start (int): year describing the start of the data
+        end (int): year describing the end of the data (inclusive)
+
+    Returns:
+        list: list of all update months in format "YYYY-MM"
+    """
+    updates = []
+    for year in range(start, end + 1):  # all years through the given end
+        for month in range(1, 13):  #include 12 months
+            if month < 10:
+                updates.append(str(year) + "-0" + str(month))
+            else:
+                updates.append(str(year) + "-" + str(month))
+
+    return updates
+
+
 def main():
     ### Read in data ###
 
-    # #Build list of all unique compounds & patents, as well as dictionaries with dates
-    get_cpd_patent_info("Data/SureChemblMAP/")
+    # # #Build list of all unique compounds & patents, as well as dictionaries with dates
+    # get_cpd_patent_info("Data/SureChemblMAP/")
 
     ### Create cpd-patent graph ###
     #Note - takes ~90GB and ~20 minutes to build the full network
 
-    # for update in updates:
-    #     print("--- Building:", update, "---")
-    #     G = build_bipartite_network(
-    #         pickle.load(file=open(
-    #             "Data/CpdPatentIdsDates/unique_cpds" + update +
-    #             ".p", "rb")),
-    #         pickle.load(file=open(
-    #             "Data/CpdPatentIdsDates/unique_patents" + update +
-    #             ".p", "rb")),
-    #         pickle.load(file=open(
-    #             "Data/CpdPatentIdsDates/cpd_date_dict" + update +
-    #             ".p", "rb")),
-    #         pickle.load(file=open(
-    #             "Data/CpdPatentIdsDates/patent_date_dict" + update +
-    #             ".p", "rb")),
-    #         pickle.load(file=open(
-    #             "Data/CpdPatentIdsDates/cpd_patent_edges" + update +
-    #             ".p", "rb")))
+    ### Test rclone from GDrive ###
+    # Move all files to Google Drive
 
-    #     pickle.dump(G, file=open("Data/Graphs/G_" + update + ".p", "wb"))
+    updates = build_month_list(1962, 2020)
+
+    for update in updates:
+        for label in [
+                "unique_cpds", "unique_patents", "cpd_date_dict",
+                "patent_date_dict", "cpd_patent_edges", "patent_cpd_edges"
+        ]:
+            subprocess.run([
+                "rclone",
+                "copy",
+                "SureChemBL_Patents:CpdPatentIdsDates/" + label + "_" + update +
+                ".p",
+                "/scratch/jmalloy3/CpdPatentIdsDates/",
+            ])
+
+        print("--- Building:", update, "---")
+        # #Build bipartite network
+        # G = build_bipartite_network(
+        #     pickle.load(file=open(
+        #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
+        #         ".p", "rb")),
+        #     pickle.load(file=open(
+        #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_patents_" + update +
+        #         ".p", "rb")),
+        #     pickle.load(file=open(
+        #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
+        #         ".p", "rb")),
+        #     pickle.load(file=open(
+        #         "/scratch/jmalloy3/CpdPatentIdsDates/patent_date_dict_" +
+        #         update + ".p", "rb")),
+        #     pickle.load(file=open(
+        #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_patent_edges_" +
+        #         update + ".p", "rb")))
+
+        # pickle.dump(G,
+        #             file=open("/scratch/jmalloy3/Graphs/G_" + update + ".p",
+        #                       "wb"))
+
+        # del (G)
+
+        #Build cpd-cpd network
+        G = build_cpd_network(
+            pickle.load(file=open(
+                "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
+                ".p", "rb")),
+            pickle.load(file=open(
+                "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
+                ".p", "rb")),
+            pickle.load(file=open(
+                "/scratch/jmalloy3/CpdPatentIdsDates/patent_cpd_edges_" +
+                update + ".p", "rb")))
+
+        pickle.dump(G, file=open("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
+        # G.save("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".gmlz",
+        #        format="graphmlz")  #save in zipped-gml format to save memory
+
+        del (G)  #remove G from memory to free up space
+
+        #Move all Graphs to GDrive
+        subprocess.run([
+            "rclone", "moveto", "/scratch/jmalloy3/Graphs",
+            "SureChemBL_Patents:Graphs"
+        ])
+
+        #Delete all files from scratch (already backed up in GDrive)
+        subprocess.run(["rm", "-r", "/scratch/jmalloy3/CpdPatentIdsDates/"])
 
     ### Cpd & Patent subgraphs ###
     # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
@@ -428,30 +498,6 @@ def main():
     # print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
     #         str(sizes[2]) + "," + str(sizes[3]),
     #         file=f)
-
-    # ### Build cpd-cpd graph ###
-    # test = ["20141231"]
-    # print("\n\n --- Building Graphs --- \n")
-    # for update in test:
-    #     print("--- Building:", update, "---")
-    #     for c in range(17, 38):  # len(pre-2014 data) / 5.5 million = 38
-    #         G = build_cpd_network(
-    #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/unique_cpds" + update +
-    #                 ".p", "rb")),
-    #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/cpd_date_dict" + update +
-    #                 ".p", "rb")),
-    #             pickle.load(file=open(
-    #                 "Data/CpdPatentIdsDates/patent_cpd_edges" + update + "_" +
-    #                 str(c) + ".p", "rb")))
-
-    #         # pickle.dump(G, file=open("Data/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
-    #         G.save("Data/Graphs/G_cpd_" + update + "_" + str(c) + ".gmlz",
-    #                format="graphmlz")  #save in zipped-gml format to save memory
-    #         del (G)  #remove G from memory to free up space
-
-    #     #TODO: rebuild 20210101 cpd-patent graph (overwrote it accidentally)
 
 
 if __name__ == "__main__":
