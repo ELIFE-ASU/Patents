@@ -12,9 +12,9 @@ import pickle
 from itertools import islice
 from itertools import zip_longest
 from itertools import accumulate
-import time
 import os
 import subprocess
+import pandas as pd
 
 
 def get_degrees(G):
@@ -56,10 +56,10 @@ def read_cpdcpd_graph(update):
     Returns:
         G (igraph object): cpd-cpd network pertaining to a specific update
     """
-    # TODO: read in pickled files, instead of gmlz
-    fp = "/scratch/jmalloy3/Graphs/G_cpd_" + update + ".gmlz"
+    fp = "/scratch/jmalloy3/Graphs/G_cpd_" + update + ".p"
+    #fp = "G:\\Shared drives\\SureChemBL_Patents\\Graphs\\G_cpd_" + update + ".p"
     print(fp)
-    G = ig.Graph.Read_GraphMLz(fp)
+    G = pickle.load(open(fp, "rb"))
     print("Loaded graph:", update)
     print(ig.summary(G))
 
@@ -76,8 +76,8 @@ def read_cpdcpd_graph(update):
 def get_network_stats(start, stop):
     """Finds basic network statistics SureChemBL cpd-cpd graphs in a given range
 
-    Calculates num nodes, num edges, avg degree, max degree, diameter, avg path length,
-    avg clustering coefficient, num clusters, largest connected component size
+    Calculates num nodes, num edges, avg degree, max degree,
+    avg clustering coefficient, largest connected component size
 
     Args:
         start (int): year of starting point for analysis
@@ -87,45 +87,48 @@ def get_network_stats(start, stop):
         (none): writes a file containing the basic network statistics for each month
                 in a given myself
     """
-
-    print(start, stop)
     updates = build_month_list(start, stop)
+    data = []
 
     for update in updates:
         subprocess.run([
             "rclone",
             "copy",
-            "SureChemBL_Patents:Graphs/G_cpd_" + update + ".gmlz",
+            "SureChemBL_Patents:Graphs/G_cpd_" + update + ".p",
             "/scratch/jmalloy3/Graphs/",
         ])
 
-        read_cpdcpd_graph(update)
+        G = read_cpdcpd_graph(update)
+        network_stats = {}
 
-    # for update in test:
-    #     for i in range(39):  #All pre-20141231 updates
-    #         start = time.time()
-    #         print("--- Analyzing:", update, i, "---")
-    #         G = read_cpdcpd_graph(update + "_" + str(i))
+        degrees = get_degrees(G)
+        id_degrees = get_id_degree(G)
+        # del (G)
+        network_stats["Nodes"] = G.vcount()
+        network_stats["Edges"] = G.ecount()
+        network_stats["Avg Degree"] = np.mean(degrees)
+        network_stats["Max Degree"] = max(degrees)
+        network_stats["LCC Size"] = G.clusters().giant().vcount()
+        network_stats["Clustering coefficient"] = G.transitivity_undirected()
+        print(network_stats)
+        print()
+        data.append(network_stats)
 
-    #         degrees = get_degrees(G)
-    #         id_degrees = get_id_degree(G)
-    #         del (G)
-    #         print("Avg Degree:", np.mean(degrees))
-    #         pickle.dump(degrees,
-    #                     file=open(
-    #                         "Data/Degrees/degrees_" + update + "_" + str(i) +
-    #                         ".p", "wb"))
+        pickle.dump(degrees,
+                    file=open(
+                        "/scratch/jmalloy3/Degrees/Months/degrees_" + update +
+                        ".p", "wb"))
 
-    #         pickle.dump(id_degrees,
-    #                     file=open(
-    #                         "Data/Degrees/id_degrees_" + update + "_" + str(i) +
-    #                         ".p", "wb"))
+        pickle.dump(id_degrees,
+                    file=open(
+                        "/scratch/jmalloy3/Degrees/Months/id_degrees_" +
+                        update + ".p", "wb"))
 
-    #         print("Time:", time.time() - start)
-    #         del (degrees)
-    #         del (id_degrees)
-
-    #     print()
+    df = pd.DataFrame(data)
+    pickle.dump(df,
+                file=open(
+                    "/scratch/jmalloy3/NetworkStats/stats_" + str(start) + "_" +
+                    str(stop) + ".csv", "wb"))
 
 
 def build_month_list(start, end):
@@ -195,7 +198,6 @@ def link_id_degrees(full_id_degrees, id_degrees, i, bins):
 
     Returns:
         full_id_degrees: updated full dictionary of id:[degrees]
-        i: updated increment
     """
     for key, value in id_degrees.items():
         #If a id is in the dictionary, update the appropriate degree value
@@ -206,7 +208,7 @@ def link_id_degrees(full_id_degrees, id_degrees, i, bins):
             full_id_degrees[key] = [0] * bins
             full_id_degrees[key][i] = value
 
-    return full_id_degrees, i + 1
+    return full_id_degrees
 
 
 def replace_zeroes(full_id_degrees):
@@ -225,7 +227,7 @@ def replace_zeroes(full_id_degrees):
     """
     #Finds cumulative sum of values
     print("\n----- Replacing zero values -----\n")
-    for key, value in tqdm(full_id_degrees.items()):
+    for key, value in full_id_degrees.items():
         cum_value = list(accumulate(value))
         full_id_degrees[key] = cum_value
 
@@ -249,7 +251,7 @@ def pref_attachment_calculation(full_id_degrees):
 
     print("\n----- Calculating preferential attachment -----\n")
     pref_attach_dict = {}
-    for key, value in tqdm(full_id_degrees.items()):
+    for key, value in full_id_degrees.items():
         c = 0
         attachments = []
         while c < len(value) - 1:
@@ -260,7 +262,7 @@ def pref_attachment_calculation(full_id_degrees):
     return pref_attach_dict
 
 
-def calculate_full_preferential_attachment():
+def calculate_full_preferential_attachment(start, stop):
     """ Calculates preferential attachment index (see Rednar 2004) for SureChemBL degrees
     across all patents
 
@@ -270,30 +272,40 @@ def calculate_full_preferential_attachment():
     'Data/Degrees' directory
     """
     print("\n----- Building id-degree dictionary -----\n")
+    updates = build_month_list(start, stop)
+
     full_id_degrees = {}
-    bins = 63  #there are 63 unique update files
+    bins = len(updates)  #there are 63 unique update files
 
-    i = 0
-    for f in tqdm(os.listdir("Data/Degrees/")):
-        if f.startswith("id_degrees_"):
-            #Load id_degree dictionary
-            id_degrees = pickle.load(file=open("Data/Degrees/" + f, "rb"))
+    i = 0  #update number (to link id_degree lists with updates)
+    for update in updates:
+        #Load id_degree dictionary
+        id_degrees = pickle.load(file=open(
+            "/scratch/jmalloy3/Degrees/Months/id_degrees_" + update +
+            ".p", "rb"))
 
-            full_id_degrees, i = link_id_degrees(full_id_degrees, id_degrees, i,
-                                                 bins)
+        full_id_degrees = link_id_degrees(full_id_degrees, id_degrees, i, bins)
+        i += 1  #increment position
 
-    print(list(islice(full_id_degrees.items(), 10)))
+    #print(list(islice(full_id_degrees.items(), 10)))
 
     full_id_degrees = replace_zeroes(full_id_degrees)
 
-    print(list(islice(full_id_degrees.items(), 10)))
+    #print(list(islice(full_id_degrees.items(), 10)))
 
     pickle.dump(full_id_degrees,
-                file=open("Data/Degrees/full_id_degrees.p", "wb"))
+                file=open(
+                    "/scratch/jmalloy3/Degrees/full_id_degrees_" + str(start) +
+                    "_" + str(stop) + ".p", "wb"))
 
     pref_attach_dict = pref_attachment_calculation(full_id_degrees)
+
+    #print(list(islice(pref_attach_dict.items(), 10)))
+
     pickle.dump(pref_attach_dict,
-                file=open("Data/Degrees/pref_attach_dict.p", "wb"))
+                file=open(
+                    "/scratch/jmalloy3/pref_attach_dict_" + str(start) + "_" +
+                    str(stop) + ".p", "wb"))
 
 
 def calculate_range_preferential_attachment(start, end):
@@ -317,18 +329,61 @@ def calculate_range_preferential_attachment(start, end):
     print(list(islice(full_id_degrees.items(), 10)))
 
 
+def clear_scratch(start, stop):
+    """ Move files from scratch to GDrive
+
+    Move: id_degrees (in Degrees/Months) - worked
+        : degrees (in Degrees/Months) - worked
+        : network_stats (in NetworkStats)
+        : full_id_degrees (in Degrees)
+        : pref_attach_dict (in scratch/jmalloy3)
+
+    Delete: G_cpd_XXXX-MM.p, in Graphs/
+
+    """
+    fps_months = [
+        "Degrees/Months/id_degrees_", "Degrees/Months/degrees_", "Graphs/C_cpd_"
+    ]
+    fps_years = [
+        "NetworkStats/stats_", "Degrees/full_id_degrees_",
+        "pref_attach_dict_"
+    ]
+
+    updates = build_month_list(start, stop)
+    for update in updates:
+        for f in fps_months:
+            #Move all files to GDrive
+            subprocess.run([
+                "rclone", "moveto", "/scratch/jmalloy3/" + f + update + ".p",
+                "SureChemBL_Patents:" + f + update + ".p"
+            ])
+
+    for f in fps_years:
+        #Move all files to GDrive
+        subprocess.run([
+            "rclone", "moveto",
+            "/scratch/jmalloy3/" + f + str(start) + "_" + str(stop) + ".p",
+            "SureChemBL_Patents:" + f + str(start) + "_" + str(stop) +
+            ".p"
+        ])
+
+
 def main():
+    start = 1980
+    stop = 1989
     #Calculate basic high-level network stats from SureChemBL updates
-    get_network_stats(2020, 2020)
+    get_network_stats(start, stop)
 
     #Store all degree distributions in a single list
     #get_degree_distributions()
 
     #Calculate preferential attachment index for entire SureChemBL dataset
-    #calculate_full_preferential_attachment()
+    calculate_full_preferential_attachment(start, stop)
 
-    #Calculate preferential attachment for a specific range of dates
-    #calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
+    # Calculate preferential attachment for a specific range of dates
+    # calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
+
+    clear_scratch(start, stop)
 
 
 if __name__ == "__main__":
