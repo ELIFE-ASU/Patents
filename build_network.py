@@ -419,7 +419,7 @@ def main():
     ### Test rclone from GDrive ###
     # Move all files to Google Drive
 
-    updates = build_month_list(1962, 2020)
+    updates = build_month_list(2016, 2020)
 
     for update in updates:
         for label in [
