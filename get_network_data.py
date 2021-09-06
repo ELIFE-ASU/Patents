@@ -128,7 +128,7 @@ def get_network_stats(start, stop):
     pickle.dump(df,
                 file=open(
                     "/scratch/jmalloy3/NetworkStats/stats_" + str(start) + "_" +
-                    str(stop) + ".csv", "wb"))
+                    str(stop) + ".p", "wb"))
 
 
 def build_month_list(start, end):
@@ -262,7 +262,7 @@ def pref_attachment_calculation(full_id_degrees):
     return pref_attach_dict
 
 
-def calculate_full_preferential_attachment(start, stop):
+def calculate_preferential_attachment(start, stop):
     """ Calculates preferential attachment index (see Rednar 2004) for SureChemBL degrees
     across all patents
 
@@ -275,7 +275,7 @@ def calculate_full_preferential_attachment(start, stop):
     updates = build_month_list(start, stop)
 
     full_id_degrees = {}
-    bins = len(updates)  #there are 63 unique update files
+    bins = len(updates)
 
     i = 0  #update number (to link id_degree lists with updates)
     for update in updates:
@@ -306,27 +306,6 @@ def calculate_full_preferential_attachment(start, stop):
                 file=open(
                     "/scratch/jmalloy3/pref_attach_dict_" + str(start) + "_" +
                     str(stop) + ".p", "wb"))
-
-
-def calculate_range_preferential_attachment(start, end):
-    """Calculates the preferential attachement for a range of dates
-
-    Based off Redner 2004, calculates preferential attachment over a specific
-    date range. Saves files to /Data/Degrees directory.
-
-    Args:
-        start (string): Start date of preferential attachment calculations. Should
-            be in form YYYY-MM-DD
-        end (string): End date, informat YYYY-MM-DD
-    """
-
-    #TODO: automatically generate files which need to be read in
-
-    #Read in first pre-2015 update
-    full_id_degrees = pickle.load(
-        file=open("Data/Degrees/id_degrees_20141231_0.p", "rb"))
-
-    print(list(islice(full_id_degrees.items(), 10)))
 
 
 def clear_scratch(start, stop):
@@ -368,22 +347,48 @@ def clear_scratch(start, stop):
         ])
 
 
+def build_increments(start, stop, increment):
+    """ Build a range of years from start to stop, given a specific increment
+
+    Args:
+        start (int): starting year
+        stop (int): ending year
+        increment (int): number of years in one time series
+
+    Returns:
+        year_increments (list): list of tuples, each containing one time series
+    """
+    year_increments = []
+    start_increment = start
+    stop_increment = start + increment - 1 #keep increment-range (not increment + 1)
+    while stop_increment <= stop:
+        year_increments.append((start_increment, stop_increment))
+        start_increment += increment
+        stop_increment += increment
+
+    return year_increments
+
 def main():
     start = 1980
-    stop = 1989
-    #Calculate basic high-level network stats from SureChemBL updates
-    get_network_stats(start, stop)
+    stop = 2020
 
-    #Store all degree distributions in a single list
-    #get_degree_distributions()
+    five_year_increments = build_increments(start, stop, 5)
+    ten_year_increments = build_increments(start, stop, 10)
+    #twenty_year_increments = build_increments(start, stop, 20)
 
-    #Calculate preferential attachment index for entire SureChemBL dataset
-    calculate_full_preferential_attachment(start, stop)
+    for inc in five_year_increments + ten_year_increments: # + twenty_year_increments:
+        start, stop = inc[0], inc[1]
 
-    # Calculate preferential attachment for a specific range of dates
-    # calculate_range_preferential_attachment("1962-01-30", "1979-12-31")
+        #Calculate basic high-level network stats from SureChemBL updates
+        get_network_stats(start, stop)
 
-    clear_scratch(start, stop)
+        # # #Store all degree distributions in a single list
+        # # #get_degree_distributions()
+
+        #Calculate preferential attachment index for a range of the SureChemBL dataset
+        calculate_preferential_attachment(start, stop)
+
+        clear_scratch(start, stop)
 
 
 if __name__ == "__main__":
