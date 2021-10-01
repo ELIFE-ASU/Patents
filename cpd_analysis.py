@@ -87,7 +87,7 @@ def find_highest_degrees(df, n, start, stop):
     print()
 
 
-def find_llanos_cpds(df):
+def find_llanos_cpds(fp, df):
     """ Tests various compounds found in Llanos et al (2019) in SureChemBL data
 
     Llanos et al used Reaxys data to find the most popular compounds. This checks
@@ -96,21 +96,73 @@ def find_llanos_cpds(df):
     Args:
         df (pandas dataframe): dataframe of all SureChemBL chemistry
     """
-    cpds_1980_1999_inchi = {
-        "acetic anhydride": "InChI=1S/C4H6O3/c1-3(5)7-4(2)6/h1-2H3",
-        "methanol": "InChI=1S/CH4O/c1-2/h2H,1H3",
-        "methyl iodide": "InChI=1S/CH3I/c1-2/h1H3",
-        "diazomethane": "InChI=1S/CH2N2/c1-3-2/h1H2",
-        "formaldehyde": "InChI=1S/CH2O/c1-2/h1H2",
-        "benzaldehyde": "InChI=1S/C7H6O/c8-6-7-4-2-1-3-5-7/h1-6H",
-        "copper(II) oxide": "InChI=1S/Cu.O",
-        "ethanol": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
-        "benzoyl chloride": "InChI=1S/C7H5ClO/c8-7(9)6-4-2-1-3-5-6/h1-5H",
-        "carbon monoxide": "InChI=1S/CO/c1-2"
+
+    cpds_1980_2015_inchi = {
+        "acetic anhydride":
+            "InChI=1S/C4H6O3/c1-3(5)7-4(2)6/h1-2H3",
+        "methanol":
+            "InChI=1S/CH4O/c1-2/h2H,1H3",
+        "methyl iodide":
+            "InChI=1S/CH3I/c1-2/h1H3",
+        "diazomethane":
+            "InChI=1S/CH2N2/c1-3-2/h1H2",
+        "formaldehyde":
+            "InChI=1S/CH2O/c1-2/h1H2",
+        "benzaldehyde":
+            "InChI=1S/C7H6O/c8-6-7-4-2-1-3-5-7/h1-6H",
+        "copper(II) oxide":
+            "InChI=1S/Cu.O",
+        "ethanol":
+            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
+        "benzoyl chloride":
+            "InChI=1S/C7H5ClO/c8-7(9)6-4-2-1-3-5-6/h1-5H",
+        "carbon monoxide":
+            "InChI=1S/CO/c1-2",
+        "water (2000)":
+            "InChI=1S/H2O/h1H2",
+        "Trifluoroacetic acid (2000)":
+            "InChI=1S/C2HF3O2/c3-2(4,5)1(6)7/h(H,6,7)",
+        "Phenylacetylene (2000)":
+            "InChI=1S/C8H6/c1-2-8-6-4-3-5-7-8/h1,3-7H",
+        "benzyl bromide (2000)":
+            "InChI=1S/C7H7Br/c8-6-7-4-2-1-3-5-7/h1-5H,6H2"
     }
 
-    for inchi in cpds_1980_1999_inchi.values():
-        print(df[df["InChI"] == inchi])
+    #Find stats for Llanos compounds - use 2015 data for stats (I really need to make a consensus graph)
+    full_id_degrees = pickle.load(file=open(
+        "G:\\Shared drives\\SureChemBL_Patents\\Degrees\\full_id_degrees_2015_2019.p",
+        "rb"))
+    pref_attach_dict = pickle.load(file=open(
+        "G:\\Shared drives\\SureChemBL_Patents\\pref_attach_dict_2015_2019.p",
+        "rb"))
+    pref_attach_values = list(pref_attach_dict.values())
+
+    #Loop through Llanos compounds
+    with open(fp + "llanos_cpds.csv", "a") as f:
+        f.write(
+            "name,inchi,SureChemBL_ID,degree,pref_attach_value,pref_attach_percentile\n"
+        )
+        for name, inchi in cpds_1980_2015_inchi.items():
+            s = df[df["InChI"] == inchi]
+            if not s.empty:  #if SureChemBL holds that compound, save id & stats
+                #Degree of compound
+                degree = full_id_degrees[s.iloc[0]["SureChEMBL_ID"]][-1]
+
+                #Preferential attachment value
+                pref_attach_value = pref_attach_dict[s.iloc[0]["SureChEMBL_ID"]]
+
+                #Percentile of preferential attachment value
+                pref_attach_percentile = stats.percentileofscore(
+                    pref_attach_values,
+                    pref_attach_dict[s.iloc[0]["SureChEMBL_ID"]])
+
+                f.write(name + ",\"" + inchi + "\"," +
+                        s.iloc[0]["SureChEMBL_ID"] + "," + str(degree) + "," +
+                        str(pref_attach_value) + "," +
+                        str(pref_attach_percentile) + "\n")
+
+            else:  #if not, no name nor stats
+                f.write(name + ",\"" + inchi + "\",na,na,na,na\n")
 
 
 def main():
@@ -126,7 +178,7 @@ def main():
     #     find_highest_degrees(cpd_df, n, range[0], range[1])
 
     ### Testing Llanos et al (2019) compounds ###
-    find_llanos_cpds(cpd_df)
+    find_llanos_cpds(data_fp, cpd_df)
 
 
 if __name__ == "__main__":

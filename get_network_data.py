@@ -279,6 +279,13 @@ def calculate_preferential_attachment(start, stop):
 
     i = 0  #update number (to link id_degree lists with updates)
     for update in updates:
+        subprocess.run([
+            "rclone",
+            "copy",
+            "SureChemBL_Patents:Degrees/Months/id_degrees_" + update + ".p",
+            "/scratch/jmalloy3/Degrees/Months/",
+        ])
+
         #Load id_degree dictionary
         id_degrees = pickle.load(file=open(
             "/scratch/jmalloy3/Degrees/Months/id_degrees_" + update +
@@ -372,23 +379,25 @@ def main():
     start = 1980
     stop = 2020
 
-    five_year_increments = build_increments(start, stop, 5)
-    ten_year_increments = build_increments(start, stop, 10)
-    #twenty_year_increments = build_increments(start, stop, 20)
+    ## NOTE: building preferential attachement across entire network
 
-    for inc in five_year_increments + ten_year_increments: # + twenty_year_increments:
-        start, stop = inc[0], inc[1]
+    # five_year_increments = build_increments(start, stop, 5)
+    # ten_year_increments = build_increments(start, stop, 10)
+    # #twenty_year_increments = build_increments(start, stop, 20)
 
-        #Calculate basic high-level network stats from SureChemBL updates
-        get_network_stats(start, stop)
+    # for inc in five_year_increments + ten_year_increments: # + twenty_year_increments:
+    #     start, stop = inc[0], inc[1]
 
-        # # #Store all degree distributions in a single list
-        # # #get_degree_distributions()
+    #Calculate basic high-level network stats from SureChemBL updates
+    #get_network_stats(start, stop)
 
-        #Calculate preferential attachment index for a range of the SureChemBL dataset
-        calculate_preferential_attachment(start, stop)
+    # # #Store all degree distributions in a single list
+    # # #get_degree_distributions()
 
-        clear_scratch(start, stop)
+    #Calculate preferential attachment index for a range of the SureChemBL dataset
+    calculate_preferential_attachment(start, stop)
+
+    #clear_scratch(start, stop)
 
 
 if __name__ == "__main__":
