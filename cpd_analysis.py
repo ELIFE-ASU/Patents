@@ -1,11 +1,12 @@
-import igraph as ig
-import numpy as np
+# import igraph as ig
+# import numpy as np
 import pickle
 import pandas as pd
 from tqdm import tqdm
 import os
 import heapq
 import scipy.stats as stats
+from random import sample
 
 
 def build_cpd_df(fp):
@@ -82,7 +83,7 @@ def find_highest_degrees(df, n, start, stop):
 
     highest_degree_cpds_df.to_csv(
         "G:\\Shared drives\\SureChemBL_Patents\\Cpd_Data/highest_degree_data_" +
-        str(start) + "_" + str(stop) + ".csv")
+        str(start) + "_" + str(stop) + "_1000.csv")
 
     print()
 
@@ -165,21 +166,94 @@ def find_llanos_cpds(fp, df):
                 f.write(name + ",\"" + inchi + "\",na,na,na,na\n")
 
 
+def build_month_increments(start, stop):
+    """ Build all monthly increments from the start year to stop year in the
+    format YEAR-MONTH
+
+    Args:
+        start (int): start year of increments
+        stop (int): end year of increments
+
+    Returns:
+        list: list of strings holding the YEAR-MONTH increments
+    """
+    months = []
+    while start <= stop:
+        for month in [
+                "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                "11", "12"
+        ]:
+            months.append(str(start) + "-" + month)
+        start += 1
+
+    return months
+
+
+def sample_compounds(n1, n2, months, cpd_df):
+    """ Sample n compounds from each month, initially with overlap allowed
+    //TODO: fix so that only unique-to-that-month compounds are sampled
+
+    Args:
+        n (int): number of compounds to sample
+        n2 (int): another number of compounds to sample
+        months (string): description of month, e.g. 1980-01
+        cpd_df (pandas dataframe): contains information for each compound in SureChemBL, including InChIKey
+
+    Returns:
+        list: list of all randomly sampled compounds (in inchi?)
+    """
+
+    #Inchis for all sampled compounds
+    sample_inchis_n1 = {}
+    sample_inchis_n2 = {}
+
+    print("----- Sampling Compounds ------\n")
+    for month in tqdm(months):
+        cpds = pickle.load(file=open(
+            "G:\\Shared drives\\SureChemBL_Patents\\CpdPatentIdsDates\\unique_cpds_"
+            + month + ".p", "rb"))
+
+        sample_cpds_n1 = sample(cpds, n1)
+        sample_cpds_n2 = sample(cpds, n2)
+
+        sub_df = cpd_df[cpd_df["SureChEMBL_ID"].isin(sample_cpds_n1)]
+        sample_inchis_n1[month] = list(sub_df["InChI"])
+
+        sub_df = cpd_df[cpd_df["SureChEMBL_ID"].isin(sample_cpds_n2)]
+        sample_inchis_n2[month] = list(sub_df["InChI"])
+
+    #Save memory by removing cpd datframe and monthly compounds
+    del(cpd_df)
+    del(cpds)
+
+    #Save sampled inchis to pickle files
+    print("\n----- Saving Data -----")
+    pickle.dump(sample_inchis_n1, file=open("Data/sample_inchi_100.p", "wb"))
+    pickle.dump(sample_inchis_n2, file=open("Data/sample_inchi_1000.p", "wb"))
+
+
+
 def main():
+    # ### Highest Degree compounds ###
     data_fp = "G:\\Shared drives\\SureChemBL_Patents\\Cpd_Data\\"
-    # build_cpd_df(data_fp) #NOTE: only needs to be run once
+    # # build_cpd_df(data_fp) #NOTE: only needs to be run once
 
     cpd_df = pickle.load(file=open(data_fp + "SureChemBL_allCpds.p", "rb"))
+    print(cpd_df.columns)
 
     # ### Statistics over highest degree compounds ###
-    # n = 100  #Number of compounds to find
+    # n = 1000  #Number of compounds to find
     # for range in [(1980, 1984), (1985, 1989), (1990, 1994), (1995, 1999),
     #               (2000, 2004), (2005, 2009), (2010, 2014), (2015, 2019)]:
     #     find_highest_degrees(cpd_df, n, range[0], range[1])
 
-    ### Testing Llanos et al (2019) compounds ###
-    find_llanos_cpds(data_fp, cpd_df)
+    # ### Testing Llanos et al (2019) compounds ###
+    # find_llanos_cpds(data_fp, cpd_df)
 
+    ### Sampling compounds for MA analysis ###
+    sample_compounds(100, 1000, build_month_increments(1980, 2019), cpd_df)
+
+    ### MA Analysis ###
 
 if __name__ == "__main__":
     main()

@@ -279,20 +279,32 @@ def calculate_preferential_attachment(start, stop):
 
     i = 0  #update number (to link id_degree lists with updates)
     for update in updates:
-        subprocess.run([
-            "rclone",
-            "copy",
-            "SureChemBL_Patents:Degrees/Months/id_degrees_" + update + ".p",
-            "/scratch/jmalloy3/Degrees/Months/",
-        ])
+        # subprocess.run([
+        #     "rclone",
+        #     "copy",
+        #     "SureChemBL_Patents:Degrees/Months/id_degrees_" + update + ".p",
+        #     "/scratch/jmalloy3/Degrees/Months/",
+        # ])
 
-        #Load id_degree dictionary
+        #Load id_degree dictionary - attempting through GDrive
         id_degrees = pickle.load(file=open(
-            "/scratch/jmalloy3/Degrees/Months/id_degrees_" + update +
-            ".p", "rb"))
+            "SureChemBL_Patents:Degrees/Months/id_degrees_" + update + ".p",
+            "rb"))
+
+        # #Load id_degree dictionary
+        # id_degrees = pickle.load(file=open(
+        #     "/scratch/jmalloy3/Degrees/Months/id_degrees_" + update +
+        #     ".p", "rb"))
 
         full_id_degrees = link_id_degrees(full_id_degrees, id_degrees, i, bins)
         i += 1  #increment position
+
+        # #Remove file from scratch
+        # subprocess.run([
+        #     "rclone", "moveto",
+        #     "/scratch/jmalloy3/Degrees/Months/id_degrees_" + update + ".p",
+        #     "SureChemBL_Patents:Degrees/Months/id_degrees_" + update + ".p",
+        # ])
 
     #print(list(islice(full_id_degrees.items(), 10)))
 
@@ -377,7 +389,7 @@ def build_increments(start, stop, increment):
 
 def main():
     start = 1980
-    stop = 2020
+    stop = 1981
 
     ## NOTE: building preferential attachement across entire network
 
