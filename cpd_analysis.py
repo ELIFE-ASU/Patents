@@ -189,6 +189,37 @@ def build_month_increments(start, stop):
     return months
 
 
+def sample_compounds_unique(n, months, cpds, cpd_df):
+    """ Sample compounds which are uniquely added in a specific month
+
+    This uniquess is determined by determing when a compound is added in a month
+    and has not been present in the patent record before that month.
+
+    Args:
+        n (int): Number of compounds to sample every month
+        months (list): list of months to sample from
+        cpds (list): all SureChemBL IDs of compounds added in a specific month
+        cpd_df (pandas dataframe): Master dataframe of all compounds
+    """
+    sample_inchis = {}
+
+    print("----- Sampling unique compounds -----")
+    for i in tqdm(range(len(months))):
+        offset = 216 #Account for starting in 1980 instead of 1962
+
+        #Only sample if there are more than 1000 compounds
+        if len(cpds[i+offset]) > n:
+            sample_cpds = sample(cpds[i+offset], n)
+        else:
+            sample_cpds = cpds[i+offset]
+
+        sub_df = cpd_df[cpd_df["SureChEMBL_ID"].isin(sample_cpds)]
+        sample_inchis[months[i]] = list(sub_df["InChI"])
+
+    print("\n----- Saving compounds -----")
+    pickle.dump(sample_inchis, file=open("Data/sample_inchi_1000_NEW.p", "wb"))
+
+
 def sample_compounds(n1, n2, months, cpd_df):
     """ Sample n compounds from each month, initially with overlap allowed
     //TODO: fix so that only unique-to-that-month compounds are sampled
@@ -223,14 +254,13 @@ def sample_compounds(n1, n2, months, cpd_df):
         sample_inchis_n2[month] = list(sub_df["InChI"])
 
     #Save memory by removing cpd datframe and monthly compounds
-    del(cpd_df)
-    del(cpds)
+    del (cpd_df)
+    del (cpds)
 
     #Save sampled inchis to pickle files
     print("\n----- Saving Data -----")
     pickle.dump(sample_inchis_n1, file=open("Data/sample_inchi_100.p", "wb"))
     pickle.dump(sample_inchis_n2, file=open("Data/sample_inchi_1000.p", "wb"))
-
 
 
 def main():
@@ -251,9 +281,15 @@ def main():
     # find_llanos_cpds(data_fp, cpd_df)
 
     ### Sampling compounds for MA analysis ###
-    sample_compounds(100, 1000, build_month_increments(1980, 2019), cpd_df)
+    month_unique_cpds = pickle.load(file=open(
+        "G:\\Shared drives\\SureChemBL_Patents\\CpdPatentIdsDates\\unique_cpds_AllMonths.p",
+        "rb"))
+    sample_compounds_unique(1000, build_month_increments(1980, 2019),
+                            month_unique_cpds, cpd_df)
+    # sample_compounds(100, 1000, build_month_increments(1980, 2019), cpd_df)
 
     ### MA Analysis ###
+
 
 if __name__ == "__main__":
     main()

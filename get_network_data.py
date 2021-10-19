@@ -163,7 +163,7 @@ def get_degree_distributions():
     #Load all degrees associated with quarterly updates
     print("\n----- Loading Degree Distributions -----\n")
     all_degrees = []
-    for f in tqdm(os.listdir("Data/Degrees/")):
+    for f in os.listdir("Data/Degrees/"):
         if f.startswith("degrees_"):
             degrees = pickle.load(file=open("Data/Degrees/" + f, "rb"))
             degrees.sort(reverse=True)

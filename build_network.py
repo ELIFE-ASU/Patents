@@ -14,14 +14,8 @@ import pandas as pd
 import numpy as np
 import time
 import datetime
-from tqdm import tqdm
-import os
 from collections import defaultdict
 from itertools import combinations
-from itertools import islice
-from itertools import repeat
-from multiprocessing import Pool
-from functools import partial
 import calendar
 import subprocess
 
@@ -407,6 +401,90 @@ def build_month_list(start, end):
     return updates
 
 
+def build_patent_ID_mapping(fp):
+    """ Builds a dictionary mapping SureChemBL IDs to numerical indicies,
+    for ease of building an igraph network
+
+    Args:
+        fp (string): filepath to location of compound data
+
+    Returns:
+        none: does save dictionary to cp_ID_index_dict.p
+    """
+    allcpds = pd.read_pickle(fp + "SureChemBL_allCpds.p")
+
+    cpd_dict = dict(zip(allcpds.SureChEMBL_ID, allcpds.index))
+
+    pickle.dump(cpd_dict, file=open(fp + "cpd_ID_index_dict.p", "wb"))
+
+
+def replaceIds(updates, fp, cpd_id_dict):
+    """ Replace SureChemBL ids with igraph indicies - will save igraph memory
+
+    Args:
+        updates (list): all months in a certain range (YYYY-MM)
+        fp (string): filepath to compound data
+        cpd_id_dict (dictionary): links SureChemBL ids to igraph indicies
+
+    Returns:
+        none: saves each update to a pickle file
+    """
+    for update in updates:
+        patent_cpd_edges = pickle.load(
+            file=open(fp + "patent_cpd_edges_" + update + ".p", "rb"))
+
+        patent_id_edges = {}  #New dictionary to hold patent/id relations
+
+        #Track number of compounds that do not appear in SureChemBL compound list
+        count = 0
+        failed = 0
+
+        #Replace SureChemBL cpd ids with igraph indicies
+        for patent, cpds in patent_cpd_edges.items():
+            indicies = []
+            count += len(cpds)
+            for cpd in cpds:
+                try:
+                    indicies.append(cpd_id_dict[cpd])
+                except:
+                    failed += 1  #Count failures if compound doesn't appear in cp_id_dict
+
+            patent_id_edges[patent] = indicies
+
+        pickle.dump(patent_id_edges,
+                    file=open(fp + "patent_id_edges" + update + ".p", "wb"))
+
+
+def build_edgelist(updates, fp):
+    """ Build unique edgelist for igraph network
+
+    Args:
+        updates (list): list of months (YYYY-MM format)
+        fp (string): filepath to CpdPatentIdsDates directory
+
+    Returns:
+        None: saves edgelist to pickle file (index_edgelist.p)
+    """
+    edgelist = []
+    for update in updates:
+        #Load all patent edges
+        patent_index_edges = pickle.load(
+            file=open(fp + "patent_id_edges" + update + ".p", "rb"))
+
+        #Loop through all compounds in a particular month
+        for cpds in patent_index_edges.values():
+            #Only consider patents with more than two compounds
+            if len(cpds
+                  ) > 1:
+                #Add combinations to growing edgelist
+                edgelist.extend(list(combinations(cpds, 2)))
+
+    #Remove duplicates in edgelist to keep memory down
+    edgelist = list(dict.fromkeys(edgelist))
+
+    pickle.dump(edgelist, file=open(fp + "index_edgelist.p", "wb"))
+
+
 def main():
     ### Read in data ###
 
@@ -419,72 +497,72 @@ def main():
     ### Test rclone from GDrive ###
     # Move all files to Google Drive
 
-    updates = build_month_list(2016, 2020)
+    updates = build_month_list(1962, 2019)
 
-    for update in updates:
-        for label in [
-                "unique_cpds", "unique_patents", "cpd_date_dict",
-                "patent_date_dict", "cpd_patent_edges", "patent_cpd_edges"
-        ]:
-            subprocess.run([
-                "rclone",
-                "copy",
-                "SureChemBL_Patents:CpdPatentIdsDates/" + label + "_" + update +
-                ".p",
-                "/scratch/jmalloy3/CpdPatentIdsDates/",
-            ])
+    # for update in updates:
+    #     for label in [
+    #             "unique_cpds", "unique_patents", "cpd_date_dict",
+    #             "patent_date_dict", "cpd_patent_edges", "patent_cpd_edges"
+    #     ]:
+    #         subprocess.run([
+    #             "rclone",
+    #             "copy",
+    #             "SureChemBL_Patents:CpdPatentIdsDates/" + label + "_" + update +
+    #             ".p",
+    #             "/scratch/jmalloy3/CpdPatentIdsDates/",
+    #         ])
 
-        print("--- Building:", update, "---")
-        # #Build bipartite network
-        # G = build_bipartite_network(
-        #     pickle.load(file=open(
-        #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
-        #         ".p", "rb")),
-        #     pickle.load(file=open(
-        #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_patents_" + update +
-        #         ".p", "rb")),
-        #     pickle.load(file=open(
-        #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
-        #         ".p", "rb")),
-        #     pickle.load(file=open(
-        #         "/scratch/jmalloy3/CpdPatentIdsDates/patent_date_dict_" +
-        #         update + ".p", "rb")),
-        #     pickle.load(file=open(
-        #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_patent_edges_" +
-        #         update + ".p", "rb")))
+    #     print("--- Building:", update, "---")
+    # #Build bipartite network
+    # G = build_bipartite_network(
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
+    #         ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_patents_" + update +
+    #         ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
+    #         ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/patent_date_dict_" +
+    #         update + ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_patent_edges_" +
+    #         update + ".p", "rb")))
 
-        # pickle.dump(G,
-        #             file=open("/scratch/jmalloy3/Graphs/G_" + update + ".p",
-        #                       "wb"))
+    # pickle.dump(G,
+    #             file=open("/scratch/jmalloy3/Graphs/G_" + update + ".p",
+    #                       "wb"))
 
-        # del (G)
+    # del (G)
 
-        #Build cpd-cpd network
-        G = build_cpd_network(
-            pickle.load(file=open(
-                "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
-                ".p", "rb")),
-            pickle.load(file=open(
-                "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
-                ".p", "rb")),
-            pickle.load(file=open(
-                "/scratch/jmalloy3/CpdPatentIdsDates/patent_cpd_edges_" +
-                update + ".p", "rb")))
+    # #Build cpd-cpd network
+    # G = build_cpd_network(
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/unique_cpds_" + update +
+    #         ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/cpd_date_dict_" + update +
+    #         ".p", "rb")),
+    #     pickle.load(file=open(
+    #         "/scratch/jmalloy3/CpdPatentIdsDates/patent_cpd_edges_" +
+    #         update + ".p", "rb")))
 
-        pickle.dump(G, file=open("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
-        # G.save("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".gmlz",
-        #        format="graphmlz")  #save in zipped-gml format to save memory
+    # pickle.dump(G, file=open("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".p", "wb")) ## Too much memory
+    # # G.save("/scratch/jmalloy3/Graphs/G_cpd_" + update + ".gmlz",
+    # #        format="graphmlz")  #save in zipped-gml format to save memory
 
-        del (G)  #remove G from memory to free up space
+    # del (G)  #remove G from memory to free up space
 
-        #Move all Graphs to GDrive
-        subprocess.run([
-            "rclone", "moveto", "/scratch/jmalloy3/Graphs",
-            "SureChemBL_Patents:Graphs"
-        ])
+    # #Move all Graphs to GDrive
+    # subprocess.run([
+    #     "rclone", "moveto", "/scratch/jmalloy3/Graphs",
+    #     "SureChemBL_Patents:Graphs"
+    # ])
 
-        #Delete all files from scratch (already backed up in GDrive)
-        subprocess.run(["rm", "-r", "/scratch/jmalloy3/CpdPatentIdsDates/"])
+    # #Delete all files from scratch (already backed up in GDrive)
+    # subprocess.run(["rm", "-r", "/scratch/jmalloy3/CpdPatentIdsDates/"])
 
     ### Cpd & Patent subgraphs ###
     # G_cpd, G_patent = G.bipartite_projection(multiplicity=False)
@@ -498,6 +576,21 @@ def main():
     # print(update + "," + str(sizes[0]) + "," + str(sizes[1]) + "," +
     #         str(sizes[2]) + "," + str(sizes[3]),
     #         file=f)
+
+    ### Build Full igraph Network ###
+    #Step 1: Map SureChemBL patent ids to igraph vertices - SHOULD ONLY BE RUN ONCE
+    fp = "Data/CpdPatentIdsDates/"
+    # build_patent_ID_mapping(fp)
+
+    #Load cpd-id dictionary
+    #cpd_id_dict = pickle.load(file=open(fp + "cpd_ID_index_dict.p", "rb"))
+
+    #Make dictionary of patent-igraph indicies - SHOULD ONLY BE RUN ONCE
+    # replaceIds(updates,
+    #            "G:\\Shared drives\\SureChemBL_Patents\\CpdPatentIdsDates\\",
+    #            cpd_id_dict)
+
+    build_edgelist(updates, fp)
 
 
 if __name__ == "__main__":

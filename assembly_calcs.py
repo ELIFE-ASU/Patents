@@ -44,8 +44,8 @@ def calculate_assembly(month, inchi):
 
 
 def main():
-    #Read in sampled compounds (only 100 per month)
-    cpds = pickle.load(file=open("Data/sample_inchi_100.p", "rb"))
+    #Read in sampled compounds (updated for full 1000 compounds)
+    cpds = pickle.load(file=open("Data/sample_inchi_1000_NEW.p", "rb"))
 
     date_cpd_sets = []
     for key, value in cpds.items():
@@ -63,7 +63,7 @@ def main():
     pool.close()
     pool.join()
 
-    pickle.dump(assemblies, file=open("Data/assembly_values.p", "wb"))
+    pickle.dump(assemblies, file=open("Data/assembly_values_1000_NEW.p", "wb"))
 
 
 if __name__ == "__main__":
