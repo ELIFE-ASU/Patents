@@ -465,22 +465,25 @@ def build_edgelist(updates, fp):
     Returns:
         None: saves edgelist to pickle file (index_edgelist.p)
     """
-    edgelist = []
+    edgelist = {}
     for update in updates:
         #Load all patent edges
         patent_index_edges = pickle.load(
             file=open(fp + "patent_id_edges" + update + ".p", "rb"))
 
+        print(patent_index_edges)
+
         #Loop through all compounds in a particular month
         for cpds in patent_index_edges.values():
             #Only consider patents with more than two compounds
-            if len(cpds
-                  ) > 1:
-                #Add combinations to growing edgelist
-                edgelist.extend(list(combinations(cpds, 2)))
-
-    #Remove duplicates in edgelist to keep memory down
-    edgelist = list(dict.fromkeys(edgelist))
+            if len(cpds) > 1:
+                #Add combinations to growing edgelist using dictionaries and sets
+                for cpd in cpds:
+                    if cpd not in edgelist.keys():
+                        edgelist[cpd] = set()
+                        edgelist[cpd].update([x for x in cpds if x != cpd])
+                    else:
+                        edgelist[cpd].update([x for x in cpds if x != cpd])
 
     pickle.dump(edgelist, file=open(fp + "index_edgelist.p", "wb"))
 
@@ -580,6 +583,7 @@ def main():
     ### Build Full igraph Network ###
     #Step 1: Map SureChemBL patent ids to igraph vertices - SHOULD ONLY BE RUN ONCE
     fp = "Data/CpdPatentIdsDates/"
+    #fp = "G:\\Shared Drives\\SureChemBL_Patents\\CpdPatentIdsDates\\"
     # build_patent_ID_mapping(fp)
 
     #Load cpd-id dictionary
