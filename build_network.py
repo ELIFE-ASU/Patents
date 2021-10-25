@@ -18,6 +18,8 @@ from collections import defaultdict
 from itertools import combinations
 import calendar
 import subprocess
+import os
+from tqdm import tqdm
 
 
 def read_data(fp):
@@ -401,7 +403,7 @@ def build_month_list(start, end):
     return updates
 
 
-def build_patent_ID_mapping(fp):
+def build_cpd_ID_mapping(fp):
     """ Builds a dictionary mapping SureChemBL IDs to numerical indicies,
     for ease of building an igraph network
 
@@ -412,24 +414,64 @@ def build_patent_ID_mapping(fp):
         none: does save dictionary to cp_ID_index_dict.p
     """
     allcpds = pd.read_pickle(fp + "SureChemBL_allCpds.p")
+    unique_cpds = list(set(allcpds["SureChEMBL_ID"].tolist()))
+    print("Cpds with IDs:", len(allcpds["SureChEMBL_ID"].tolist()))
+    print("All compounds:", len(allcpds))
+    print("Unique cpds:", len(list(set(allcpds["SureChEMBL_ID"].tolist()))))
 
-    cpd_dict = dict(zip(allcpds.SureChEMBL_ID, allcpds.index))
+    cpd_dict = dict(zip(unique_cpds, np.arange(0, len(unique_cpds), 1)))
 
     pickle.dump(cpd_dict, file=open(fp + "cpd_ID_index_dict.p", "wb"))
 
 
-def replaceIds(updates, fp, cpd_id_dict):
+def build_patent_ID_mapping(updates, fp):
+    """ Build a mapping between patents and igraph indicies (0-len(patents))
+
+    Args:
+        updates (list): list of months
+        fp (string): filepath to GDrive patent info
+
+    Returns:
+        None: saves patent indicies to fp+"patent_ID_index_dict.p"
+    """
+    patents = []
+    for update in tqdm(updates):
+        if os.path.isfile(fp + "patent_cpd_edges_" + update + ".p"):
+            patent_edges = pickle.load(
+                file=open(fp + "patent_cpd_edges_" + update + ".p", "rb"))
+            patents.extend(patent_edges.keys())
+
+    unique_patents = list(set(patents))
+    print("Patents from patent edges:", len(patents))
+    print("Unique patents:", len(unique_patents))
+    print(patents[0:100])
+
+    patent_ids = dict(zip(unique_patents, np.arange(0, len(unique_patents), 1)))
+
+    pickle.dump(patent_ids, file=open(fp + "patent_ID_index_dict.p", "wb"))
+
+
+def replaceIds(updates, fp, cpd_id_dict, patent_id_dict):
     """ Replace SureChemBL ids with igraph indicies - will save igraph memory
 
     Args:
         updates (list): all months in a certain range (YYYY-MM)
         fp (string): filepath to compound data
         cpd_id_dict (dictionary): links SureChemBL ids to igraph indicies
+        patent_id_dict (dictionary): links patent ids to igraph indicies
 
     Returns:
         none: saves each update to a pickle file
     """
-    for update in updates:
+    #number to add to patents to avoid duplicate igraph indicies
+    num_cpds = len(cpd_id_dict)
+    print("Num Cpds:", num_cpds)
+    print("Num patents:", len(patent_id_dict))
+
+    print("Max cpd value:", max(cpd_id_dict.values()))
+    print("Max patent value:", max(patent_id_dict.values()))
+
+    for update in tqdm(updates):
         patent_cpd_edges = pickle.load(
             file=open(fp + "patent_cpd_edges_" + update + ".p", "rb"))
 
@@ -449,13 +491,15 @@ def replaceIds(updates, fp, cpd_id_dict):
                 except:
                     failed += 1  #Count failures if compound doesn't appear in cp_id_dict
 
-            patent_id_edges[patent] = indicies
+            #Link patent index with all compound indicies associated with it
+            patent_id_edges[patent_id_dict[patent] + num_cpds] = indicies
 
+        #Save each month's edges
         pickle.dump(patent_id_edges,
                     file=open(fp + "patent_id_edges" + update + ".p", "wb"))
 
 
-def build_edgelist(updates, fp):
+def build_cpd_edgelist(updates, fp):
     """ Build unique edgelist for igraph network
 
     Args:
@@ -471,8 +515,6 @@ def build_edgelist(updates, fp):
         patent_index_edges = pickle.load(
             file=open(fp + "patent_id_edges" + update + ".p", "rb"))
 
-        print(patent_index_edges)
-
         #Loop through all compounds in a particular month
         for cpds in patent_index_edges.values():
             #Only consider patents with more than two compounds
@@ -486,6 +528,68 @@ def build_edgelist(updates, fp):
                         edgelist[cpd].update([x for x in cpds if x != cpd])
 
     pickle.dump(edgelist, file=open(fp + "index_edgelist.p", "wb"))
+
+    del (edgelist)
+
+
+def build_bipartite_edgelist(updates, fp):
+    """ Builds patent-cpd edges using igraph indicies
+
+    Args:
+        updates (list): list of months (YYYY-MM format)
+        fp (string): filepath to CpdPatentIdsDates directory
+
+    Returns:
+        None: saves edges to pickle file (index_edgelist_bipartite.p in CpdPatentIdsDates)
+    """
+    edges = []
+    max_value = 0
+
+    for update in tqdm(updates):
+        patent_index_edges = pickle.load(
+            file=open(fp + "patent_id_edges" + update + ".p", "rb"))
+
+        for patent, cpds in patent_index_edges.items():
+            if patent > max_value:
+                max_value = patent
+
+            for cpd in cpds:
+                edges.append((patent - 1,
+                              cpd))  #-1 to account for adding 1 in replaceIDs
+
+    pickle.dump(edges,
+                file=open(
+                    "/scratch/jmalloy3/Patents/index_edgelist_bipartite.p",
+                    "wb"))
+    print("Max Value is:", max_value)
+
+    return edges
+
+
+def build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict):
+    """ Builds full igraph network containing patents and compounds
+
+    Args:
+        edgelist (list of sets): list of all edges between patent & compound indicies
+        cpd_id_dict (dict): links SureChemBL cpd ids with igraph indicies
+        patent_id_dict (dict): links patent ids with igraph indicies
+    """
+    print("Sum of cpd & patent id dicts is:",
+          len(cpd_id_dict) + len(patent_id_dict))
+    G = ig.Graph()
+
+    #Add nodes
+    G.add_vertices(len(cpd_id_dict) + len(patent_id_dict))
+    G.vs["name"] = [*cpd_id_dict] + [*patent_id_dict]
+
+    #Add edges
+    G.add_edges(edgelist)
+
+    del (edgelist)
+    del (cpd_id_dict)
+    del (patent_id_dict)
+
+    pickle.dump(G, file=open("/scratch/jmalloy/Patents/cpd_patent_G.p", "wb"))
 
 
 def main():
@@ -580,11 +684,11 @@ def main():
     #         str(sizes[2]) + "," + str(sizes[3]),
     #         file=f)
 
-    ### Build Full igraph Network ###
-    #Step 1: Map SureChemBL patent ids to igraph vertices - SHOULD ONLY BE RUN ONCE
-    fp = "Data/CpdPatentIdsDates/"
-    #fp = "G:\\Shared Drives\\SureChemBL_Patents\\CpdPatentIdsDates\\"
-    # build_patent_ID_mapping(fp)
+    ### Build Full igraph Network - Update: Too much memory ###
+    #Step 1: Map SureChemBL cpd ids to igraph vertex labels - SHOULD ONLY BE RUN ONCE
+    # fp = "Data/CpdPatentIdsDates/"
+    # fp = "G:\\Shared Drives\\SureChemBL_Patents\\Cpd_Data\\"
+    # build_cpd_ID_mapping(fp)
 
     #Load cpd-id dictionary
     #cpd_id_dict = pickle.load(file=open(fp + "cpd_ID_index_dict.p", "rb"))
@@ -594,7 +698,41 @@ def main():
     #            "G:\\Shared drives\\SureChemBL_Patents\\CpdPatentIdsDates\\",
     #            cpd_id_dict)
 
-    build_edgelist(updates, fp)
+    # build_edgelist(updates, fp)  #NOTE: runs out of memory on Agave :(
+
+    ### Build Full igraph cpd-patent network ###
+    #fp = "G:\\Shared Drives\\SureChemBL_Patents\\CpdPatentIdsDates\\"
+    fp = "Data/CpdPatentIdsDates/"
+
+    # #Step 1: build patent-id dictionary - should only be run once
+    # build_patent_ID_mapping(updates, fp)
+
+    # #Step 2: Update patent-cpd-id files to include patent ids
+    # #Load cpd-id dictionary - should only be run once
+    # cpd_id_dict = pickle.load(file=open(
+    #     "G:\\Shared Drives\\SureChemBL_Patents\\Cpd_Data\\cpd_ID_index_dict.p",
+    #     "rb"))
+    # patent_id_dict = pickle.load(file=open(
+    #     "G:\\Shared Drives\\SureChemBL_Patents\\CpdPatentIdsDates\\patent_ID_index_dict.p",
+    #     "rb"))
+
+    # print("Num Cpds:", len(cpd_id_dict))
+    # print("Patents", len(patent_id_dict))
+
+    # replaceIds(updates, fp, cpd_id_dict, patent_id_dict)
+
+    # #Step 3: Make edgelist of patent-cpd edges, using igraph ids - should only be run once
+    edgelist = build_bipartite_edgelist(updates, fp)
+
+    # Step 4: Build & save full igraph network
+    # edgelist = pickle.load(
+    #     file=open("/scratch/jmalloy3/Patents/index_edgelist_bipartite.p", "rb"))
+    cpd_id_dict = pickle.load(file=open("Data/cpd_ID_index_dict.p", "rb"))
+    patent_id_dict = pickle.load(file=open("Data/patent_ID_index_dict.p", "rb"))
+
+    build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
+    #
+    # Step 5: Add cpd names & patent ids
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import assemblycalculator as ac
 import multiprocessing as mp
 import pickle
+import numpy as np
 
 
 def build_month_increments(start, stop):
@@ -44,26 +45,35 @@ def calculate_assembly(month, inchi):
 
 
 def main():
+
     #Read in sampled compounds (updated for full 1000 compounds)
     cpds = pickle.load(file=open("Data/sample_inchi_1000_NEW.p", "rb"))
 
-    date_cpd_sets = []
-    for key, value in cpds.items():
-        for cpd in value:
-            date_cpd_sets.append((key, cpd))
+    for year in np.arange(1980, 2020, 1):
+        #Set up parallelization - a bit of overhead for setting it up, but that's fine
+        pool = mp.Pool(64)
 
-    #Set up parallelization
-    pool = mp.Pool(64)
+        #Build months in a specific year
+        months = build_month_increments(year, year)
 
-    #Calculate assembly values for all inchis, save in a list holding dictionaries
-    assemblies = [
-        pool.apply(calculate_assembly, args=(s[0], s[1])) for s in date_cpd_sets
-    ]
+        date_cpd_sets = []
+        for key, value in cpds.items():
+            if key in months:
+                for cpd in value:
+                    date_cpd_sets.append((key, cpd))
 
-    pool.close()
-    pool.join()
+        #Calculate assembly values for all inchis, save in a list holding dictionaries
+        assemblies = [
+            pool.apply(calculate_assembly, args=(s[0], s[1]))
+            for s in date_cpd_sets
+        ]
 
-    pickle.dump(assemblies, file=open("Data/assembly_values_1000_NEW.p", "wb"))
+        pool.close()
+        pool.join()
+
+        pickle.dump(assemblies,
+                    file=open("Data/assembly_values_1000_" + str(year) + ".p",
+                              "wb"))
 
 
 if __name__ == "__main__":
