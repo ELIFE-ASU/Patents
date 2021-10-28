@@ -554,7 +554,7 @@ def build_bipartite_edgelist(updates, fp):
                 max_value = patent
 
             for cpd in cpds:
-                edges.append((patent - 1,
+                edges.append((patent,
                               cpd))  #-1 to account for adding 1 in replaceIDs
 
     pickle.dump(edges,
@@ -585,11 +585,13 @@ def build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict):
     #Add edges
     G.add_edges(edgelist)
 
+    print(ig.summary(G))
+
     del (edgelist)
     del (cpd_id_dict)
     del (patent_id_dict)
 
-    pickle.dump(G, file=open("/scratch/jmalloy/Patents/cpd_patent_G.p", "wb"))
+    pickle.dump(G, file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "wb"))
 
 
 def main():
@@ -722,15 +724,18 @@ def main():
     # replaceIds(updates, fp, cpd_id_dict, patent_id_dict)
 
     # #Step 3: Make edgelist of patent-cpd edges, using igraph ids - should only be run once
-    edgelist = build_bipartite_edgelist(updates, fp)
+    #edgelist = build_bipartite_edgelist(updates, fp)
 
     # Step 4: Build & save full igraph network
     # edgelist = pickle.load(
     #     file=open("/scratch/jmalloy3/Patents/index_edgelist_bipartite.p", "rb"))
-    cpd_id_dict = pickle.load(file=open("Data/cpd_ID_index_dict.p", "rb"))
-    patent_id_dict = pickle.load(file=open("Data/patent_ID_index_dict.p", "rb"))
+    cpd_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/Cpd_Data/cpd_ID_index_dict.p", "rb"))
+    patent_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/CpdPatentIdsDates/patent_ID_index_dict.p", "rb"))
 
-    build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
+    print("Num cpds:", len(cpd_id_dict))
+    print("Num patents:", len(patent_id_dict))
+
+    #build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
     #
     # Step 5: Add cpd names & patent ids
 

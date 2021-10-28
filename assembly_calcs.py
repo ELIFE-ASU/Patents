@@ -47,7 +47,7 @@ def calculate_assembly(month, inchi):
 def main():
 
     #Read in sampled compounds (updated for full 1000 compounds)
-    cpds = pickle.load(file=open("Data/sample_inchi_1000_NEW.p", "rb"))
+    cpds = pickle.load(file=open("Data/sample_inchi_1000.p", "rb"))
 
     for year in np.arange(1980, 2020, 1):
         #Set up parallelization - a bit of overhead for setting it up, but that's fine
@@ -72,8 +72,9 @@ def main():
         pool.join()
 
         pickle.dump(assemblies,
-                    file=open("Data/assembly_values_1000_" + str(year) + ".p",
-                              "wb"))
+                    file=open(
+                        "Data/assembly_values_1000_FULL_" + str(year) + ".p",
+                        "wb"))
 
 
 if __name__ == "__main__":
