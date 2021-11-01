@@ -581,6 +581,8 @@ def build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict):
     #Add nodes
     G.add_vertices(len(cpd_id_dict) + len(patent_id_dict))
     G.vs["name"] = [*cpd_id_dict] + [*patent_id_dict]
+    #Type is cpd/patent to distinguish bipartite nature of nodes
+    G.vs["type"] = [0]*len(cpd_id_dict) + [1]*len(patent_id_dict)
 
     #Add edges
     G.add_edges(edgelist)
@@ -727,15 +729,21 @@ def main():
     #edgelist = build_bipartite_edgelist(updates, fp)
 
     # Step 4: Build & save full igraph network
-    # edgelist = pickle.load(
-    #     file=open("/scratch/jmalloy3/Patents/index_edgelist_bipartite.p", "rb"))
-    cpd_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/Cpd_Data/cpd_ID_index_dict.p", "rb"))
-    patent_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/CpdPatentIdsDates/patent_ID_index_dict.p", "rb"))
+    edgelist = pickle.load(
+        file=open("/scratch/jmalloy3/Patents/index_edgelist_bipartite.p", "rb"))
+
+    # #GDrive filepath
+    # cpd_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/Cpd_Data/cpd_ID_index_dict.p", "rb"))
+    # patent_id_dict = pickle.load(file=open("G:/Shared drives/SureChemBL_Patents/CpdPatentIdsDates/patent_ID_index_dict.p", "rb"))
+
+    #Agave filepaths
+    cpd_id_dict = pickle.load(file=open("Data/cpd_ID_index_dict.p", "rb"))
+    patent_id_dict = pickle.load(file=open("Data/patent_ID_index_dict.p", "rb"))
 
     print("Num cpds:", len(cpd_id_dict))
     print("Num patents:", len(patent_id_dict))
 
-    #build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
+    build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
     #
     # Step 5: Add cpd names & patent ids
 
