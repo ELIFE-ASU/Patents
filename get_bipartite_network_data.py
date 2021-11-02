@@ -105,7 +105,7 @@ def get_earlier_cpds(month):
     """
     #Read in master compound-date-index dataframe
     agave_fp = "Data/Cpd_Data/master_cpd_date_index_df.p"
-    drive_fp = "G:/Shared drives/SureChemBL_Patents/Cpd_Data/master_cpd_date_index_df.p"
+    #drive_fp = "G:/Shared drives/SureChemBL_Patents/Cpd_Data/master_cpd_date_index_df.p"
     df = pickle.load(file=open(agave_fp, "rb"))
 
     print(df.head())
@@ -148,6 +148,7 @@ def build_subgraph(G, month):
         file=open("/scratch/jmalloy3/Patents/Graphs/cpd_patent_" + month + ".p",
                   "wb"))
 
+    del (G_sub)
 
 def main():
     updates = build_month_list(1980, 2019)
