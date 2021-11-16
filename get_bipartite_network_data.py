@@ -165,7 +165,7 @@ def read_graph(update):
     Returns:
         G (igraph object): cpd-patent network pertaining to a specific update
     """
-    fp = "/scratch/jmalloy3/Graphs/cpd_patent_" + update + ".p"
+    fp = "/scratch/jmalloy3/Patents/Graphs/cpd_patent_" + update + ".p"
     G = pickle.load(open(fp, "rb"))
 
     print(ig.summary(G))
@@ -220,7 +220,7 @@ def get_network_stats(updates):
             "rclone",
             "copy",
             "SureChemBL_Patents:Graphs/cpd_patent_" + update + ".p",
-            "/scratch/jmalloy3/Graphs/",
+            "/scratch/jmalloy3/Patents/Graphs/",
         ])
 
         G = read_graph(update)
@@ -246,7 +246,7 @@ def get_network_stats(updates):
 
         print("Time elapsed per graph:", time.time() - start)
 
-        subprocess.run(["rm", "cpd_patent_" + update + ".p"])
+        subprocess.run(["rm", "/scratch/jmalloy3/Patents/Graphs/cpd_patent_" + update + ".p"])
 
     #     pickle.dump(degrees,
     #                 file=open(
