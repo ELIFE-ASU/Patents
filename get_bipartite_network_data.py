@@ -4,6 +4,8 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 from itertools import islice
+import time
+import subprocess
 
 
 def build_month_list(start, end):
@@ -150,20 +152,131 @@ def build_subgraph(G, month):
 
     del (G_sub)
 
+
+def read_graph(update):
+    """ Reads a cpd-patent graph in .p format
+
+    Assumes that the data are stored in the /scratch/jmalloy3/Graphs/ directory and in the format
+    cpd_patent_<update>.p
+
+    Args:
+        fp (string): filepath to a specific cpd-patent graph
+
+    Returns:
+        G (igraph object): cpd-patent network pertaining to a specific update
+    """
+    fp = "/scratch/jmalloy3/Graphs/cpd_patent_" + update + ".p"
+    G = pickle.load(open(fp, "rb"))
+
+    print(ig.summary(G))
+
+    return G
+
+
+def get_degrees(G):
+    """ Finds the degree distribution of a igraph network
+
+    Args:
+        G (igraph object): igraph network, contains a variety of data including degrees between nodes
+
+    Returns:
+        G.degree (list): list of degrees (in order of igraph vertex index)
+    """
+    return G.degree()
+
+
+def get_id_degree(G):
+    """ Creates a dictionary of compound ids & associated degrees
+
+    Args:
+        G (igraph object): igraph network, contains a variety of data including degrees between nodes
+
+    Returns:
+        id_degree_dict (dictionary): Associates SurechemBL compound ids with degree value
+    """
+    id_degree_dict = dict(zip(G.vs["name"], G.degree()))
+
+    return id_degree_dict
+
+
+def get_network_stats(updates):
+    """Finds basic network statistics SureChemBL cpd-patent graphs in a given range
+
+    Calculates num nodes, num edges, avg degree, max degree,
+    avg clustering coefficient, largest connected component size
+
+    Args:
+        start (int): year of starting point for analysis
+        end (int): year of ending point (inclusive)
+
+    Returns:
+        (none): writes a file containing the basic network statistics for each month
+                in a given myself
+    """
+    data = []
+
+    for update in updates:
+        subprocess.run([
+            "rclone",
+            "copy",
+            "SureChemBL_Patents:Graphs/cpd_patent_" + update + ".p",
+            "/scratch/jmalloy3/Graphs/",
+        ])
+
+        G = read_graph(update)
+        network_stats = {}
+
+        start = time.time()
+        degrees = get_degrees(G)
+        #id_degrees = get_id_degree(G)
+        # del (G)
+        network_stats["Nodes"] = G.vcount()
+        network_stats["Edges"] = G.ecount()
+        network_stats["Avg Degree"] = np.mean(degrees)
+        network_stats["Max Degree"] = max(degrees)
+
+        print("Time elapsed for degree stats:", time.time() - start)
+
+        network_stats["LCC Size"] = G.clusters().giant().vcount()
+        network_stats["Clustering coefficient"] = G.transitivity_undirected()
+
+        print(network_stats)
+        print()
+        data.append(network_stats)
+
+        print("Time elapsed per graph:", time.time() - start)
+
+        subprocess.run(["rm", "cpd_patent_" + update + ".p"])
+
+    #     pickle.dump(degrees,
+    #                 file=open(
+    #                     "/scratch/jmalloy3/Degrees/Months/degrees_" + update +
+    #                     ".p", "wb"))
+
+    #     pickle.dump(id_degrees,
+    #                 file=open(
+    #                     "/scratch/jmalloy3/Degrees/Months/id_degrees_" +
+    #                     update + ".p", "wb"))
+
+    df = pd.DataFrame(data)
+    df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/stats_1980_1998.csv")
+
+
 def main():
-    updates = build_month_list(1980, 2019)
-    #1: Build subgraphs of patents/compounds present before a specific date
+    updates = build_month_list(1980, 1998)
+    # #1: Build subgraphs of patents/compounds present before a specific date
 
-    #1a: Link date of first entry & index of compounds
-    #build_master_cpd_date(updates) #NOTE: should only be run once
-    #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
+    # #1a: Link date of first entry & index of compounds
+    # #build_master_cpd_date(updates) #NOTE: should only be run once
+    # #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
 
-    G = pickle.load(file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "rb"))
+    # G = pickle.load(file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "rb"))
 
-    for month in updates:
-        build_subgraph(G, month)
+    # for month in updates:
+    #     build_subgraph(G, month)
 
     #2: Network stats over these subgraphs (not immediately necessary)
+    get_network_stats(updates)
 
     #3: Preferential attachement over compounds
 
