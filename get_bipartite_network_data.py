@@ -269,7 +269,7 @@ def get_network_stats(updates):
 
 
 def main():
-    updates = build_month_list(1999, 2020)
+    updates = build_month_list(2002, 2020)
     #1: Build subgraphs of patents/compounds present before a specific date
 
     #1a: Link date of first entry & index of compounds
