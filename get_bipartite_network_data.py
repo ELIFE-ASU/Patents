@@ -248,7 +248,11 @@ def get_network_stats(updates):
 
         subprocess.run(["rm", "/scratch/jmalloy3/cpd_patent_" + update + ".p"])
 
-        pickle.dump(data, file=open("/scratch/jmalloy3/Patents/NetworkStats/updated_networkStats.p", "wb"))
+        pickle.dump(
+            data,
+            file=open(
+                "/scratch/jmalloy3/Patents/NetworkStats/updated_networkStats.p",
+                "wb"))
 
     #     pickle.dump(degrees,
     #                 file=open(
@@ -265,20 +269,20 @@ def get_network_stats(updates):
 
 
 def main():
-    updates = build_month_list(1980, 1998)
-    # #1: Build subgraphs of patents/compounds present before a specific date
+    updates = build_month_list(1999, 2020)
+    #1: Build subgraphs of patents/compounds present before a specific date
 
-    # #1a: Link date of first entry & index of compounds
-    # #build_master_cpd_date(updates) #NOTE: should only be run once
-    # #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
+    #1a: Link date of first entry & index of compounds
+    #build_master_cpd_date(updates) #NOTE: should only be run once
+    #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
 
-    # G = pickle.load(file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "rb"))
+    G = pickle.load(file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "rb"))
 
-    # for month in updates:
-    #     build_subgraph(G, month)
+    for month in updates:
+        build_subgraph(G, month)
 
     #2: Network stats over these subgraphs (not immediately necessary)
-    get_network_stats(updates)
+    # get_network_stats(updates)
 
     #3: Preferential attachement over compounds
 
