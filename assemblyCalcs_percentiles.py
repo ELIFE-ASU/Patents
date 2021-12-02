@@ -88,7 +88,6 @@ def calculate_MAs(files):
         #Calculate assembly values using MC method
         assemblies = pool.map(calculate_assembly, cpds)
 
-        pool.join()
         pool.close()
 
         pickle.dump(assemblies,
