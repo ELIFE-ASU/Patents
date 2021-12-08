@@ -545,7 +545,7 @@ def build_bipartite_edgelist(updates, fp):
     edges = []
     max_value = 0
 
-    for update in tqdm(updates):
+    for update in updates:
         patent_index_edges = pickle.load(
             file=open(fp + "patent_id_edges" + update + ".p", "rb"))
 
@@ -555,7 +555,7 @@ def build_bipartite_edgelist(updates, fp):
 
             for cpd in cpds:
                 edges.append((patent,
-                              cpd))  #-1 to account for adding 1 in replaceIDs
+                              cpd))
 
     pickle.dump(edges,
                 file=open(
@@ -726,7 +726,7 @@ def main():
     # replaceIds(updates, fp, cpd_id_dict, patent_id_dict)
 
     # #Step 3: Make edgelist of patent-cpd edges, using igraph ids - should only be run once
-    #edgelist = build_bipartite_edgelist(updates, fp)
+    edgelist = build_bipartite_edgelist(updates, fp)
 
     # Step 4: Build & save full igraph network
     edgelist = pickle.load(
