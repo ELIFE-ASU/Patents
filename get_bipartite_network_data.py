@@ -210,15 +210,15 @@ def get_id_degree(G):
     return id_degree_dict
 
 
-def get_network_stats(G, updates):
+def get_network_stats(G, month):
     """Finds basic network statistics SureChemBL cpd-patent graphs in a given range
 
     Calculates num nodes, num edges, avg degree, max degree,
     avg clustering coefficient, largest connected component size
 
     Args:
-        start (int): year of starting point for analysis
-        end (int): year of ending point (inclusive)
+        G: igraph network G
+        month: month detailing what
 
     Returns:
         (none): writes a file containing the basic network statistics for each month
@@ -226,75 +226,76 @@ def get_network_stats(G, updates):
     """
     data = []
 
-    for update in updates:
-        # subprocess.run([
-        #     "rclone",
-        #     "copy",
-        #     "SureChemBL_Patents:Graphs/cpd_patent_" + update + ".p",
-        #     "/scratch/jmalloy3/",
-        # ])
+    # for update in updates:
+    # subprocess.run([
+    #     "rclone",
+    #     "copy",
+    #     "SureChemBL_Patents:Graphs/cpd_patent_" + update + ".p",
+    #     "/scratch/jmalloy3/",
+    # ])
 
-        #G = read_graph(update)
-        network_stats = {}
+    #G = read_graph(update)
+    network_stats = {}
 
-        start = time.time()
+    # start = time.time()
 
-        #Full Degrees
-        degrees = get_degrees(G, "all")
-        #Cpd & Patent degrees
-        cpd_degrees = get_degrees(G, "cpd")
-        patent_degrees = get_degrees(G, "patent")
+    #Full Degrees
+    degrees = get_degrees(G, "all")
+    #Cpd & Patent degrees
+    cpd_degrees = get_degrees(G, "cpd")
+    patent_degrees = get_degrees(G, "patent")
 
-        network_stats["Nodes"] = G.vcount()
-        network_stats["Edges"] = G.ecount()
+    network_stats["Nodes"] = G.vcount()
+    network_stats["Edges"] = G.ecount()
 
-        network_stats["Cpd Nodes"] = len(cpd_degrees)
-        network_stats["Patent Nodes"] = len(patent_degrees)
-        network_stats["Avg Degree"] = np.mean(degrees)
-        network_stats["Cpd Avg Degree"] = np.mean(cpd_degrees)
-        network_stats["Patent Avg Degree"] = np.mean(patent_degrees)
+    network_stats["Cpd Nodes"] = len(cpd_degrees)
+    network_stats["Patent Nodes"] = len(patent_degrees)
+    network_stats["Avg Degree"] = np.mean(degrees)
+    network_stats["Cpd Avg Degree"] = np.mean(cpd_degrees)
+    network_stats["Patent Avg Degree"] = np.mean(patent_degrees)
 
-        print("Time elapsed for degree stats:", time.time() - start)
+    # print("Time elapsed for degree stats:", time.time() - start)
 
-        network_stats["LCC Size"] = G.clusters().giant().vcount()
-        #TODO: LCC SureChemBL ids
-        lcc_ids = [G.vs.select(c)["name"] for c in G.clusters()]
+    network_stats["LCC Size"] = G.clusters().giant().vcount()
+    #TODO: LCC SureChemBL ids
+    lcc_ids = [G.vs.select(c)["name"] for c in G.clusters()]
 
-        #network_stats["Clustering coefficient"] = G.transitivity_undirected()
+    #network_stats["Clustering coefficient"] = G.transitivity_undirected()
 
-        print(network_stats)
-        print()
-        data.append(network_stats)
+    # print(network_stats)
+    # print()
+    data.append(network_stats)
 
-        print("Time elapsed per graph:", time.time() - start)
+    # print("Time elapsed per graph:", time.time() - start)
 
-        #subprocess.run(["rm", "/scratch/jmalloy3/cpd_patent_" + update + ".p"])
+    #subprocess.run(["rm", "/scratch/jmalloy3/cpd_patent_" + update + ".p"])
 
-        # pickle.dump(
-        #     data,
-        #     file=open(
-        #         "/scratch/jmalloy3/Patents/NetworkStats/updated_networkStats.p",
-        #         "wb"))
+    # pickle.dump(
+    #     data,
+    #     file=open(
+    #         "/scratch/jmalloy3/Patents/NetworkStats/updated_networkStats.p",
+    #         "wb"))
 
-        pickle.dump(cpd_degrees,
-                    file=open(
-                        "/scratch/jmalloy3/Degrees/Months/cpd_degrees_" +
-                        update + ".p", "wb"))
+    pickle.dump(cpd_degrees,
+                file=open(
+                    "/scratch/jmalloy3/Degrees/Months/cpd_degrees_" + month +
+                    ".p", "wb"))
 
-        pickle.dump(patent_degrees,
-                    file=open(
-                        "/scratch/jmalloy3/Degrees/Months/patent_degrees_" +
-                        update + ".p", "wb"))
+    pickle.dump(patent_degrees,
+                file=open(
+                    "/scratch/jmalloy3/Degrees/Months/patent_degrees_" + month +
+                    ".p", "wb"))
 
-        pickle.dump(lcc_ids,
-                    file=open(
-                        "/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_" +
-                        update + ".p", "wb"))
+    pickle.dump(lcc_ids,
+                file=open(
+                    "/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_" + month +
+                    ".p", "wb"))
 
-        del(G)
+    del (G)
 
     df = pd.DataFrame(data)
-    df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/stats_cpdsPatents.csv")
+    df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/stats_cpdsPatents_" +
+              month + ".csv")
 
 
 def main():
@@ -315,7 +316,7 @@ def main():
         G_sub = build_subgraph(G, month)
 
         #2: Network stats over these subgraphs (not immediately necessary)
-        get_network_stats(G_sub, updates)
+        get_network_stats(G_sub, month)
 
     #3: Preferential attachement over compounds
 
