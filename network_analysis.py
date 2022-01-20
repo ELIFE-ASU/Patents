@@ -76,7 +76,7 @@ def getIds(ids, allIds, lccIds, month):
     return newIds, newlccIds, existing_newlccIds, nonlcc_newIds
 
 
-def calculate_stats(allIds, lccIds, newIds, newlccIds, existing_newlccIds,
+def calculate_LCC_stats(allIds, lccIds, newIds, newlccIds, existing_newlccIds,
                     nonlcc_newIds, month):
 
     return [
@@ -105,6 +105,7 @@ def main():
     stats = []
 
     for month in build_month_increments(1980,2019):
+        ### LCC STATS ###
         ids = read_ids("/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_" +
                        month + ".p")
         # ids_2 = read_ids("Data/NetworkStats/lcc_ids_1980-03.p")
@@ -112,12 +113,13 @@ def main():
         newIds, newlccIds, existing_newlccIds, nonlcc_newIds = getIds(
             ids, allIds, lccIds, month)
         stats.append(
-            calculate_stats(allIds, lccIds, newIds, newlccIds,
+            calculate_LCC_stats(allIds, lccIds, newIds, newlccIds,
                             existing_newlccIds, nonlcc_newIds, month))
 
         allIds.extend(newIds)
-        lccIds.extend(newlccIds)
+        lccIds.extend(newlccIds)        
 
+    ### LCC OUTPUT ###
     df = pd.DataFrame(stats,
                       columns=[
                           "month", "newIds", "newIds_newLCC", "newIds_nonLCC",
