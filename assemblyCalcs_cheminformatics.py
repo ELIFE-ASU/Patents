@@ -32,16 +32,16 @@ def main():
     full_df = pd.DataFrame()
 
     for f in tqdm(os.listdir("Data/AssemblyValues/")):
-        data = pickle.load(
-            file=open("Data/AssemblyValues/assembly_values_1000_2010.p", "rb"))
-        df = pd.DataFrame(data)
+        if f.startswith("assembly_values_1000_"):
+            data = pickle.load(file=open("Data/AssemblyValues/" + f, "rb"))
+            df = pd.DataFrame(data)
 
-        df["mw"] = df["inchi"].apply(get_mw)
+            df["mw"] = df["inchi"].apply(get_mw)
 
-        if "FULL" in f:
-            full_df = full_df.append(df)
-        else:
-            new_df = new_df.append(df)
+            if "FULL" in f:
+                full_df = full_df.append(df)
+            else:
+                new_df = new_df.append(df)
 
     new_df.to_csv("Data/AssemblyValues/newCpds_AssemblyValues.csv")
     full_df.to_csv("Data/AssemblyValues/fullCpds_AssemblyValues.csv")
