@@ -299,7 +299,7 @@ def get_network_stats(G, month):
 
 
 def main():
-    updates = build_month_list(1980, 2020)
+    updates = build_month_list(1991, 2020)
 
     #updates = ["1980-01"]
 
