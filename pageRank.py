@@ -59,7 +59,7 @@ def get_pageRank(G, month):
 
 def main():
     #Find pagerank for all months in dataset
-    months = build_month_list(1980, 2019)
+    months = build_month_list(2006, 2019)
 
     for month in months:
         G = load_graph(month)
