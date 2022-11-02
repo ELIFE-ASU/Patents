@@ -124,14 +124,24 @@ def main():
     #                           "wb"))
 
     ### Run AssemblyGo on full dataset
-    fp = "Data/AssemblyValues/FullDatabase/"
-    molfiles = os.listdir(fp)
-    parallel_runAssemblyGo(molfiles, fp)
+    # fp = "Data/AssemblyValues/FullDatabase/"
+    # molfiles = os.listdir(fp)
+    # parallel_runAssemblyGo(molfiles, fp)
 
-    # ##TODO: run AssemblyGo on new dataset
+    ###: Run AssemblyGo on new dataset
     # fp = "Data/AssemblyValues/NewDatabase/"
     # molfiles = os.listdir(fp)
     # parallel_runAssemblyGo(molfiles, fp)
+
+    ### AssemblyGo on cost/reaxys directories
+    # fp = "Data/AssemblyValues/CostRandom/"
+    # molfiles = os.listdir(fp)
+    # parallel_runAssemblyGo(molfiles, fp)
+
+    ### AssemblyGo on cost/reaxys directories
+    fp = "Data/AssemblyValues/CostRandomPercentiles/"
+    molfiles = os.listdir(fp)
+    parallel_runAssemblyGo(molfiles, fp)
 
 if __name__ == "__main__":
     main()
