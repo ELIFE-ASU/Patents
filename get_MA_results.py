@@ -23,9 +23,12 @@ def get_MA(fp):
         #MA will be last elemnt in -2nd line (will be an int)
         MA = int(lines[-2].split()[-1])
 
-        return label, MA
+        time = float(lines[-1].split()[-1])
+        
+        return label, MA, time
+
     except:
-        return "", -1
+        return None, None, None
 
 
 def main():
@@ -33,20 +36,21 @@ def main():
 
     #Create & save one dataframe per database, eventually to merge with data validation csvs in analyze_ma_dist.ipynb
     database_fps = {
-        "NewDatabase": "NewDatabase_Done",
-        "FullDatabase": "FullDatabase_Done",
+        "ReaxysRandom": "ReaxysRandom_Done" #,
+        #"FullDatabase": "FullDatabase_Done",
     }
 
     for database, name in database_fps.items():
         print("----- Analzying", database, "-----")
         MA_values = []
         fp = "Data/AssemblyValues/" + name + "/"
-        for file in os.listdir(fp):
+        for file in tqdm(os.listdir(fp)):
             if file.endswith(".txt"):
-                label, MA = get_MA(fp + file)
+                label, MA, time = get_MA(fp + file)
                 MA_values.append({
                     "label": label,
-                    "MA_assemblyGo": int(MA)
+                    "MA_assemblyGo": MA,
+                    "time": time
                 })
 
         MA_df = pd.DataFrame(MA_values)
