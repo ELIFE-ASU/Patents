@@ -31,34 +31,65 @@ def move_completed_files(fp):
         fp (str): filepath to data directory containing Full & New Databases 
     """
     print("----- Moving Full Database -----")
-    completed_files = [x for x in os.listdir(fp + "/FullDatabase/") if x.endswith(".txt")]
+    completed_files = [
+        x for x in os.listdir(fp + "/FullDatabase/") if x.endswith(".txt")
+    ]
 
     for f in tqdm(completed_files):
-         os.rename(fp + "/FullDatabase/" + f, fp + "/FullDatabase_Done/" + f)
-         os.rename(fp + "/FullDatabase/" + f[:-4] + ".mol", fp + "/FullDatabase_Done/" + f[:-4] + ".mol", )
-
+        os.rename(fp + "/FullDatabase/" + f, fp + "/FullDatabase_Done/" + f)
+        os.rename(
+            fp + "/FullDatabase/" + f[:-4] + ".mol",
+            fp + "/FullDatabase_Done/" + f[:-4] + ".mol",
+        )
 
     print("----- Moving New Database -----")
-    completed_files = [x for x in os.listdir(fp + "/NewDatabase/") if x.endswith(".txt")]
-
+    completed_files = [
+        x for x in os.listdir(fp + "/NewDatabase/") if x.endswith(".txt")
+    ]
     for f in tqdm(completed_files):
         os.rename(fp + "/NewDatabase/" + f, fp + "/NewDatabase_Done/" + f)
-        os.rename(fp + "/NewDatabase/" + f[:-4] + ".mol", fp + "/NewDatabase_Done/" + f[:-4] + ".mol", )
+        os.rename(
+            fp + "/NewDatabase/" + f[:-4] + ".mol",
+            fp + "/NewDatabase_Done/" + f[:-4] + ".mol",
+        )
 
     print("----- Moving ReaxysRandom -----")
-    completed_files = [x for x in os.listdir(fp + "/ReaxysRandom/") if x.endswith(".txt")]
-
+    completed_files = [
+        x for x in os.listdir(fp + "/ReaxysRandom/") if x.endswith(".txt")
+    ]
     for f in tqdm(completed_files):
         os.rename(fp + "/ReaxysRandom/" + f, fp + "/ReaxysRandom_Done/" + f)
-        os.rename(fp + "/ReaxysRandom/" + f[:-4] + ".mol", fp + "/ReaxysRandom_Done/" + f[:-4] + ".mol", )
+        os.rename(
+            fp + "/ReaxysRandom/" + f[:-4] + ".mol",
+            fp + "/ReaxysRandom_Done/" + f[:-4] + ".mol",
+        )
 
     print("----- Moving ReaxysProductPercentiles -----")
-    completed_files = [x for x in os.listdir(fp) if x.endswith(".mol")]
-
+    completed_files = [
+        x for x in os.listdir(fp + "/ReaxysProductPercentiles/")
+        if x.endswith(".txt")
+    ]
     for f in tqdm(completed_files):
-        os.rename(fp + "/" + f, fp + "/ReaxysProductPercentiles_Done/" + f, )
+        os.rename(fp + "/ReaxysProductPercentiles/" + f,
+                  fp + "/ReaxysProductPercentiles_Done/" + f)
+        os.rename(
+            fp + "/ReaxysProductPercentiles/" + f[:-4] + ".mol",
+            fp + "/ReaxysProductPercentiles_Done/" + f[:-4] + ".mol",
+        )
 
-        
+    print("----- Moving ReaxysReferencePercentiles -----")
+    completed_files = [
+        x for x in os.listdir(fp + "/ReaxysReferencePercentiles/")
+        if x.endswith(".txt")
+    ]
+    for f in tqdm(completed_files):
+        os.rename(fp + "/ReaxysReferencePercentiles/" + f,
+                  fp + "/ReaxysReferencePercentiles_Done/" + f)
+        os.rename(
+            fp + "/ReaxysReferencePercentiles/" + f[:-4] + ".mol",
+            fp + "/ReaxysReferencePercentiles_Done/" + f[:-4] + ".mol",
+        )
+
 
 def main():
     #Progress meter
