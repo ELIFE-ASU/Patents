@@ -79,7 +79,7 @@ def get_author_patents(name):
     #HREF is split into two parts, in order to add name in the middle
     href_1 = "https://pubchem.ncbi.nlm.nih.gov/sdq/sdqagent.cgi?infmt=json&outfmt=json&query={%22download%22:%22*%22,%22collection%22:%22patent%22,%22where%22:{%22ands%22:["
     href_2 = "]},%22order%22:[%22relevancescore,desc%22],%22start%22:1,%22limit%22:10000000}"
-    
+
     #Names needs to be split & added partwise
     names = name.split()
     for subname in names:
@@ -101,6 +101,34 @@ def get_author_patents(name):
         pass
 
 
+def get_assignee_patents(name):
+    """ Downloads a JSON of all patent records associated with a specific assignee
+
+    Args:
+        name (str): name of patent author to search
+    """
+    href_1 = "https://pubchem.ncbi.nlm.nih.gov/sdq/sdqagent.cgi?infmt=json&outfmt=json&query={%22download%22:%22*%22,%22collection%22:%22patent%22,%22where%22:{%22ands%22:[{%22*%22:%22"
+    href_2 = "%22}]},%22order%22:[%22relevancescore,desc%22],%22start%22:1,%22limit%22:10000000}"
+
+    #Getting exact name - probably should do this for authors too...
+    name = " ".join(name.split()[:-1])
+    name = name.replace(" ", "%20")
+
+    href_1 += name
+    href = href_1 + href_2
+
+    #Merge full href, get resulting record (if something fails along the way, just skip it)
+    try:
+        get_url = request.urlopen(href)
+
+        #Save record as JSON in Data/Patents/Patent_Assignee_Records, with underscores in the name
+        with open("Data/Patents/Patent_Assignee_Records/" + name.replace("%20", "_") + ".json", "w") as f:
+            json_data = json.loads(get_url.read())
+            json.dump(json_data, f, indent=4)
+    except:
+        pass
+
+
 def main():
     # #### Download n random patent IDs ####
     # fp = "Data/CpdPatentIdsDates/patent_ID_index_dict.p"
@@ -111,11 +139,16 @@ def main():
     # for patent in tqdm(patents):
     #     get_patentData(patent)
 
-    #### Download patents associated with authors from above n patents ####
-    names = pickle.load(file=open("Data/Patents/authors.p", "rb"))
+    # #### Download patents associated with authors from above n patents ####
+    # names = pickle.load(file=open("Data/Patents/authors.p", "rb"))
 
-    for name in tqdm(names):
-        get_author_patents(name)
+    # for name in tqdm(names):
+    #     get_author_patents(name)
+
+    #### Download patents assiciated with assignees from above n patents ####
+    names = pickle.load(file=open("Data/Patents/assignees.p", "rb"))
+
+    get_assignee_patents(names[0])
 
 
 if __name__ == "__main__":
