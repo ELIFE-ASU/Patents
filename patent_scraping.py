@@ -69,21 +69,36 @@ def get_patentData(patent):
 
 
 def get_author_patents(name):
+    """ Downloads a JSON of all patent records associated with a specific author
+
+    NOTE: TAKES ~24 HOURS FOR FULL DATASET
+
+    Args:
+        name (str): name of patent author to search
+    """
+    #HREF is split into two parts, in order to add name in the middle
     href_1 = "https://pubchem.ncbi.nlm.nih.gov/sdq/sdqagent.cgi?infmt=json&outfmt=json&query={%22download%22:%22*%22,%22collection%22:%22patent%22,%22where%22:{%22ands%22:["
-    ## {%22*%22:%22FRERIKS%22},{%22*%22:%22JAN%22}
     href_2 = "]},%22order%22:[%22relevancescore,desc%22],%22start%22:1,%22limit%22:10000000}"
+    
+    #Names needs to be split & added partwise
     names = name.split()
     for subname in names:
+        #Also surrounded by these specific characters (idk why...ask PubChem lol)
         href_1 += "{%22*%22:%22" + subname + "%22}"
         if subname != names[-1]:
             href_1 += ","
 
+    #Merge full href, get resulting record (if something fails along the way, just skip it)
     href = href_1 + href_2
-    get_url = request.urlopen(href)
+    try:
+        get_url = request.urlopen(href)
 
-    with open("patent_test_" + name.replace(" ", "_") + ".json", "w") as f:
-        json_data = json.loads(get_url.read())
-        json.dump(json_data, f, indent=4)
+        #Save record as JSON in Data/Patents
+        with open("Data/Patents/" + name.replace(" ", "_") + ".json", "w") as f:
+            json_data = json.loads(get_url.read())
+            json.dump(json_data, f, indent=4)
+    except:
+        pass
 
 
 def main():
@@ -97,10 +112,8 @@ def main():
     #     get_patentData(patent)
 
     #### Download patents associated with authors from above n patents ####
-    names = [
-        "FRERIKS JAN", "VAN GAALEN RONALD PETRUS CLEME",
-        "KOOYMANS PETRUS GERARDUS"
-    ]
+    names = pickle.load(file=open("Data/Patents/authors.p", "rb"))
+
     for name in tqdm(names):
         get_author_patents(name)
 
