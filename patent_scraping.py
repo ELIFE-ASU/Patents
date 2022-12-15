@@ -104,6 +104,8 @@ def get_author_patents(name):
 def get_assignee_patents(name):
     """ Downloads a JSON of all patent records associated with a specific assignee
 
+    NOTE: takes ~10 hours with list of assignee names
+
     Args:
         name (str): name of patent author to search
     """
@@ -122,7 +124,9 @@ def get_assignee_patents(name):
         get_url = request.urlopen(href)
 
         #Save record as JSON in Data/Patents/Patent_Assignee_Records, with underscores in the name
-        with open("Data/Patents/Patent_Assignee_Records/" + name.replace("%20", "_") + ".json", "w") as f:
+        with open(
+                "Data/Patents/Patent_Assignee_Records/" +
+                name.replace("%20", "_") + ".json", "w") as f:
             json_data = json.loads(get_url.read())
             json.dump(json_data, f, indent=4)
     except:
@@ -148,7 +152,8 @@ def main():
     #### Download patents assiciated with assignees from above n patents ####
     names = pickle.load(file=open("Data/Patents/assignees.p", "rb"))
 
-    get_assignee_patents(names[0])
+    for name in tqdm(names):
+        get_assignee_patents(name)
 
 
 if __name__ == "__main__":
