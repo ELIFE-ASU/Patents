@@ -55,8 +55,8 @@ def crtl_c_exit(proc):
 
 
 def run_assemblyGo(molfile, fp):
-    #Set a timeout to 5 minutes
-    timeout = 300
+    #Set a timeout to 2 minutes
+    timeout = 120
 
     activator = [
         "../assemblygo/assembly", "-file=" + fp + molfile, "-log",
@@ -138,8 +138,13 @@ def main():
     # molfiles = os.listdir(fp)
     # parallel_runAssemblyGo(molfiles, fp)
 
-    ### AssemblyGo on cost/reaxys directories
-    fp = "Data/AssemblyValues/CostRandomPercentiles/"
+    # ### AssemblyGo on cost/reaxys directories
+    # fp = "Data/AssemblyValues/CostRandomPercentiles/"
+    # molfiles = os.listdir(fp)
+    # parallel_runAssemblyGo(molfiles, fp)
+
+    ### AssemblyGo on author compound directories
+    fp = "Data/AssemblyValues/AuthorCpds/"
     molfiles = os.listdir(fp)
     parallel_runAssemblyGo(molfiles, fp)
 

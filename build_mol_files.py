@@ -106,7 +106,7 @@ def main():
     #     x["inchi"], x["month"] + "_" + str(x.name), "FullDatabase"),
     #                        axis=1)
 
-    # ## Full database to mol files
+    # ## New database to mol files
     # print("------ New Database -----")
     # new_df = pd.read_csv("Data/AssemblyValues/newCpds_AssemblyValues.csv")
 
@@ -114,7 +114,24 @@ def main():
     #                                              str(x.name), "NewDatabase"),
     #                       axis=1)
 
-    move_completed_files("Data/AssemblyValues")
+    # ## Author compounds to mol files
+    # print("------ Author Compounds -----")
+    # cpd_df = pd.read_csv("Data/Patents/author_cpds_structures.csv")
+
+    # cpd_df.progress_apply(
+    #     lambda x: inchi_to_mol(x["InChI"], x["SureChEMBL_ID"], "AuthorCpds"),
+    #     axis=1)
+
+    ## Author compounds to mol files
+    print("------ Assignee Compounds -----")
+    cpd_df = pd.read_csv("Data/Patents/assignee_cpds_structures.csv")
+
+    cpd_df.progress_apply(
+        lambda x: inchi_to_mol(x["InChI"], x["SureChEMBL_ID"], "AssigneeCpds"),
+        axis=1)
+
+    # ## Move completed MA files on Agave
+    # move_completed_files("Data/AssemblyValues")
 
 
 if __name__ == "__main__":

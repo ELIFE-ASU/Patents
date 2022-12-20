@@ -6,6 +6,7 @@ import json
 import pickle
 from tqdm import tqdm
 from random import sample
+import pandas as pd
 
 
 def get_patentIDs(fp, n):
@@ -133,6 +134,64 @@ def get_assignee_patents(name):
         pass
 
 
+def build_month_increments(start, stop):
+    """ Build month increments in the form YYYY-MM
+
+    Args:
+        start (int): Starting year
+        stop (int): Ending year
+
+    Returns:
+        list: list of strings in the form YYYY-MM (e.g., "1980-01")
+    """
+    months = []
+    while start <= stop:
+        for month in [
+                "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                "11", "12"
+        ]:
+            months.append(str(start) + "-" + month)
+        start += 1
+
+    return months
+
+
+def get_all_cpds(patents):
+    """ Get all compound IDs - filter down into a non-repeating list
+
+    Args:
+        patents (list): SureChemBL patent ID list
+
+    """
+
+    months = build_month_increments(1980, 2020)
+
+    files = []
+    for month in months:
+        files.append(
+            "Data/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" +
+            month + ".p")
+
+    cpds = []
+    for file in tqdm(files):
+        with open(file, "rb") as f:
+            try:
+                edges = pickle.load(f)
+            except EOFError:
+                edges = {}
+
+        selected_patents = [p for p in edges.keys() if p in patents]
+
+        for p in selected_patents:
+            cpds.extend(edges[p])
+
+    cpds = list(set(cpds))
+
+    ## NOTE: goal of this is to have ~1 million (change number of patents otherwise)
+    print(len(cpds))
+    print(cpds[0:10])
+
+
 def main():
     # #### Download n random patent IDs ####
     # fp = "Data/CpdPatentIdsDates/patent_ID_index_dict.p"
@@ -149,11 +208,22 @@ def main():
     # for name in tqdm(names):
     #     get_author_patents(name)
 
-    #### Download patents assiciated with assignees from above n patents ####
-    names = pickle.load(file=open("Data/Patents/assignees.p", "rb"))
+    # #### Download patents assiciated with assignees from above n patents ####
+    # names = pickle.load(file=open("Data/Patents/assignees.p", "rb"))
 
-    for name in tqdm(names):
-        get_assignee_patents(name)
+    # for name in tqdm(names):
+    #     get_assignee_patents(name)
+
+    #### Get compounds associated with author's patents
+    df = pd.read_csv("Data/Patents/patent_author_records.csv")
+
+    ## Get all unique patents
+    patents = set(df["ID"])
+
+    # Randomly sampling from patents in order to make this computationally feasible (goal: ~1 million cpds)
+    patents = sample(patents, 100000)
+
+    get_all_cpds(patents)
 
 
 if __name__ == "__main__":
