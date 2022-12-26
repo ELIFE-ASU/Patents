@@ -90,6 +90,32 @@ def move_completed_files(fp):
             fp + "/ReaxysReferencePercentiles_Done/" + f[:-4] + ".mol",
         )
 
+    print("----- Moving Author Cpds -----")
+    completed_files = [
+        x for x in os.listdir(fp + "/AuthorCpds/")
+        if x.endswith(".txt")
+    ]
+    for f in tqdm(completed_files):
+        os.rename(fp + "/AuthorCpds/" + f,
+                  fp + "/AuthorCpds_Done/" + f)
+        os.rename(
+            fp + "/AuthorCpds/" + f[:-4] + ".mol",
+            fp + "/AuthorCpds_Done/" + f[:-4] + ".mol",
+        )
+
+    print("----- Moving Assignee Cpds -----")
+    completed_files = [
+        x for x in os.listdir(fp + "/AssigneeCpds/")
+        if x.endswith(".txt")
+    ]
+    for f in tqdm(completed_files):
+        os.rename(fp + "/AssigneeCpds/" + f,
+                  fp + "/AssigneeCpds_Done/" + f)
+        os.rename(
+            fp + "/AssigneeCpds/" + f[:-4] + ".mol",
+            fp + "/AssigneeCpds_Done/" + f[:-4] + ".mol",
+        )
+
 
 def main():
     #Progress meter
@@ -122,16 +148,16 @@ def main():
     #     lambda x: inchi_to_mol(x["InChI"], x["SureChEMBL_ID"], "AuthorCpds"),
     #     axis=1)
 
-    ## Author compounds to mol files
-    print("------ Assignee Compounds -----")
-    cpd_df = pd.read_csv("Data/Patents/assignee_cpds_structures.csv")
+    # ## Author compounds to mol files
+    # print("------ Assignee Compounds -----")
+    # cpd_df = pd.read_csv("Data/Patents/assignee_cpds_structures.csv")
 
-    cpd_df.progress_apply(
-        lambda x: inchi_to_mol(x["InChI"], x["SureChEMBL_ID"], "AssigneeCpds"),
-        axis=1)
+    # cpd_df.progress_apply(
+    #     lambda x: inchi_to_mol(x["InChI"], x["SureChEMBL_ID"], "AssigneeCpds"),
+    #     axis=1)
 
-    # ## Move completed MA files on Agave
-    # move_completed_files("Data/AssemblyValues")
+    ## Move completed MA files on Agave
+    move_completed_files("Data/AssemblyValues")
 
 
 if __name__ == "__main__":
