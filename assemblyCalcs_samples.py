@@ -143,10 +143,16 @@ def main():
     # molfiles = os.listdir(fp)
     # parallel_runAssemblyGo(molfiles, fp)
 
+    # ### AssemblyGo on author compound directories
+    # fp = "Data/AssemblyValues/AuthorCpds/"
+    # molfiles = os.listdir(fp)
+    # parallel_runAssemblyGo(molfiles, fp)
+
     ### AssemblyGo on author compound directories
-    fp = "Data/AssemblyValues/AuthorCpds/"
+    fp = "Data/AssemblyValues/AssigneeCpds/"
     molfiles = os.listdir(fp)
     parallel_runAssemblyGo(molfiles, fp)
+
 
 if __name__ == "__main__":
     main()
