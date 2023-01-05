@@ -96,12 +96,18 @@ def move_completed_files(fp):
         if x.endswith(".txt")
     ]
     for f in tqdm(completed_files):
-        os.rename(fp + "/AuthorCpds/" + f,
-                  fp + "/AuthorCpds_Done/" + f)
-        os.rename(
+        try:
+            os.rename(fp + "/AuthorCpds/" + f,
+                    fp + "/AuthorCpds_Done/" + f)
+        except OSError as e :
+            print(e)
+        try:
+            os.rename(
             fp + "/AuthorCpds/" + f[:-4] + ".mol",
             fp + "/AuthorCpds_Done/" + f[:-4] + ".mol",
-        )
+            )
+        except OSError as e:
+            print(e)
 
     print("----- Moving Assignee Cpds -----")
     completed_files = [
