@@ -4,6 +4,7 @@ import re
 import itertools
 from tqdm import tqdm
 import os
+import pickle
 
 
 def get_list(line):
@@ -115,44 +116,73 @@ def check_iso(candidate_fragments, all_frags):
     return all_frags
 
 
-def main():
-    ### Testing - build iGraph fragments from a single output file
-    fp = "Data/AssemblyValues/NewDatabase_Done/2019-12_211687.txt"
+def build_month_increments(start, stop):
+    """ Build all monthly increments from the start year to stop year in the
+    format YEAR-MONTH
 
+    Args:
+        start (int): start year of increments
+        stop (int): end year of increments
+
+    Returns:
+        list: list of strings holding the YEAR-MONTH increments
+    """
+    months = []
+    while start <= stop:
+        for month in [
+                "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                "11", "12"
+        ]:
+            months.append(str(start) + "-" + month)
+        start += 1
+
+    return months
+
+
+def main():
     ### Testing part 2 - all 1980 values
     fp = "Data/AssemblyValues/NewDatabase_Done/"
-    files = [x for x in os.listdir(fp) if x.startswith("1980-02")]
 
-    fragments = []
-    all_frags = []
-    vscolor_map = {}
-    escolor_map = {}
+    months = build_month_increments(1980, 2020)
 
-    for f in tqdm(files[0:2000]):
-        with open(fp + f) as f:
-            lines = f.readlines()
-            lines = [l.strip() for l in lines]
+    for month in months:
+        print(month)
+        files = [x for x in os.listdir(fp) if x.startswith(month)]
+        files = [x for x in files if x.endswith(".txt")]
+        print(len(files))
 
-        #Isolate fragments lines
-        for i in range(len(lines)):
-            if lines[i] == "======":
-                if lines[i + 1].startswith("Vertices"):
-                    start = i + 1
-                    end = i + 4
+        fragments = []
+        all_frags = []
+        vscolor_map = {}
+        escolor_map = {}
 
-                    fragments.append(
-                        build_fragment(i + 1, i + 5, lines, vscolor_map,
-                                       escolor_map))
+        for f in tqdm(files):
+            with open(fp + f) as f:
+                lines = f.readlines()
+                lines = [l.strip() for l in lines]
 
-        ## More testing - check isomorphism within a single output file
-        all_frags = check_iso(fragments, all_frags)
+            #Isolate fragments lines
+            for i in range(len(lines)):
+                if lines[i] == "======":
+                    if lines[i + 1].startswith("Vertices"):
+                        #i+1 is the start of the fragment definition, i+5 is the end
+                        fragments.append(
+                            build_fragment(i + 1, i + 5, lines, vscolor_map,
+                                        escolor_map))
 
-    print(vscolor_map)
-    print(escolor_map)
-    print("Unique fragment size:", len(all_frags))
-    # for frag in all_frags:
-    #     print(frag.vs["color"], frag.es["color"])
-    #     print("----")
+            ## More testing - check isomorphism within a single output file
+            all_frags = check_iso(fragments, all_frags)
+
+        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/newFrags_" + month + ".p", "wb"))
+
+
+
+    # print(vscolor_map)
+    # print(escolor_map)
+    # print("Unique fragment size:", len(all_frags))
+    # # for frag in all_frags:
+    # #     print(frag.vs["color"], frag.es["color"])
+    # #     print("----")
 
 
 if __name__ == "__main__":
