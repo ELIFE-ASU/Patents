@@ -5,6 +5,7 @@ import itertools
 from tqdm import tqdm
 import os
 import pickle
+import pandas as pd
 
 
 def get_list(line):
@@ -100,12 +101,14 @@ def check_iso(candidate_fragments, all_frags):
         #...against all unique fragments
         for f in all_frags:
             if possible_f.isomorphic_vf2(f,
-                                         color1=possible_f.vs["color"],
-                                         color2=f.vs["color"],
-                                         edge_color1=possible_f.es["color"],
-                                         edge_color2=f.es["color"]):
-                #if candidate is isomorphic, it is not unique, therefore break off check
-                is_unique = False
+                                            color1=possible_f.vs["color"],
+                                            color2=f.vs["color"],
+                                            edge_color1=possible_f.es["color"],
+                                            edge_color2=f.es["color"]):
+                    #if candidate is isomorphic, it is not unique, therefore break off check
+                    is_unique = False
+                    
+            if not is_unique:
                 break
 
         #If it makes it through the full list of fragments, it is unique!
@@ -140,26 +143,37 @@ def build_month_increments(start, stop):
 
 
 def main():
-    ### Testing part 2 - all 1980 values
-    fp = "Data/AssemblyValues/NewDatabase_Done/"
+    ### Using Author Cpds Done to build fragments 
+    
+    # fp = "Data/AssemblyValues/NewDatabase_Done/" #old newdatabase code
+    fp = "Data/AssemblyValues/AuthorCpds_Done/"
 
-    months = build_month_increments(1980, 2020)
+    # months = build_month_increments(1980, 2020) #old newdatabase code
 
-    for month in months:
-        print(month)
-        files = [x for x in os.listdir(fp) if x.startswith(month)]
-        files = [x for x in files if x.endswith(".txt")]
-        print(len(files))
+    df = pd.read_csv("Data/ID_months.csv")
+
+    # for month in months:
+    for index, row in df.iterrows(): #, total=df.shape[0]):
+        print("--- Analyzing", row["month"], "---")
+
+        # #Old newdatabase code 
+        # files = [x for x in os.listdir(fp) if x.startswith(month)]
+        # files = [x for x in files if x.endswith(".txt")]
+        # print(len(files))
 
         fragments = []
         all_frags = []
         vscolor_map = {}
         escolor_map = {}
 
-        for f in tqdm(files):
-            with open(fp + f) as f:
-                lines = f.readlines()
-                lines = [l.strip() for l in lines]
+        for f in tqdm(ast.literal_eval(row["IDs"])):
+            if os.path.exists(fp + f + ".txt"):
+                with open(fp + f + ".txt") as f:
+                    lines = f.readlines()
+                    lines = [l.strip() for l in lines]
+            
+            else:
+                pass
 
             #Isolate fragments lines
             for i in range(len(lines)):
@@ -173,7 +187,7 @@ def main():
             ## More testing - check isomorphism within a single output file
             all_frags = check_iso(fragments, all_frags)
 
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/newFrags_" + month + ".p", "wb"))
+        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + ".p", "wb"))
 
 
 
