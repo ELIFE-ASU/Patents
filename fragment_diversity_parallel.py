@@ -1,13 +1,9 @@
 import igraph as ig
+import pickle
+import os
+import multiprocessing as mp
 import ast
 import re
-import itertools
-from tqdm import tqdm
-import os
-import pickle
-import pandas as pd
-from random import sample
-
 
 def get_list(line):
     """ Evaluation a line to find the description and list containing data
@@ -85,7 +81,6 @@ def build_fragment(start, end, lines, vscolor_map, escolor_map):
 
     return g
 
-
 def check_iso(candidate_fragments, all_frags):
     """ Finds the unique fragments within a set of candidates
 
@@ -119,97 +114,79 @@ def check_iso(candidate_fragments, all_frags):
     #Return updated full list
     return all_frags
 
-
-def build_month_increments(start, stop):
-    """ Build all monthly increments from the start year to stop year in the
-    format YEAR-MONTH
+def find_fragments(month, IDs, fp):
+    """ Find the fragments associated with a 1000-cpd sample of MA outputs
+    from a specific month
 
     Args:
-        start (int): start year of increments
-        stop (int): end year of increments
-
-    Returns:
-        list: list of strings holding the YEAR-MONTH increments
+        month (str): month to analyze (e.g., 1980-01)
+        IDs (list): list of IDs (presampled, will be max 1000)
+        fp (str): path to output file directory
     """
-    months = []
-    while start <= stop:
-        for month in [
-                "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
-                "11", "12"
-        ]:
-            months.append(str(start) + "-" + month)
-        start += 1
 
-    return months
+    print("--- Analyzing", month, "---")
+    fragments = []
+    all_frags = []
+    lines = []
+    vscolor_map = {}
+    escolor_map = {}
 
+    #Make sure assembly output file exists
+    for f in IDs:
+        if os.path.exists("Data/AssemblyValues/AuthorCpds_Done/" + f + ".txt"):
+            with open("Data/AssemblyValues/AuthorCpds_Done/" + f + ".txt") as f:
+                lines = f.readlines()
+                lines = [l.strip() for l in lines]
+        else:
+            #Lines is empty if nothing is found
+            pass
+
+        #Isolate fragments lines
+        for i in range(len(lines)):
+            if lines[i] == "======":
+                if lines[i + 1].startswith("Vertices"):
+                    #i+1 is the start of the fragment definition, i+5 is the end
+                    fragments.append(
+                        build_fragment(i + 1, i + 5, lines, vscolor_map,
+                                    escolor_map))
+
+        ## Check isomorphism within a single output file (all_frags is empty at the beginning on purpose)
+        all_frags = check_iso(fragments, all_frags)
+
+    pickle.dump(all_frags, file=open(fp + "authorFrags_" + month + ".p", "wb"))
+
+
+def run_fragments(all_IDs, fp):
+    """ Calls fragment calculation code in parallel
+
+    Args:
+        all_IDs (dict): dict of ids per month, set up in {month:[IDs]} format
+        fp (str): filepath to save data
+    """
+
+    #Set up asynchronous parallelization
+    pool = mp.Pool(mp.cpu_count())
+
+    for month, IDs in all_IDs.items():
+        pool.apply_async(find_fragments, args=(month, IDs, fp))
+
+    pool.close()
+    pool.join()
 
 def main():
-    ### Using Author Cpds Done to build fragments 
-    
-    # fp = "Data/AssemblyValues/NewDatabase_Done/" #old newdatabase code
-    fp = "Data/AssemblyValues/AuthorCpds_Done/"
+    """ 
+    Parallelization of fragment diversity measurement
 
-    # months = build_month_increments(1980, 2020) #old newdatabase code
+    Workflow: Read in IDs, pass list of IDs to each process, calculate & save fragments as necessary
 
-    df = pd.read_csv("Data/ID_months.csv")
+    """
 
-    all_IDs = {}
+    ## Read in IDs
+    fp = "Data/AssemblyValues/Fragments/"
+    all_IDs = pickle.load(file=open(fp + "all_ids.p", "rb"))
 
-    # for month in months:
-    for index, row in df.iterrows(): #, total=df.shape[0]):
-        # print("--- Analyzing", row["month"], "---")
+    run_fragments(all_IDs, fp)
 
-        # #Old newdatabase code 
-        # files = [x for x in os.listdir(fp) if x.startswith(month)]
-        # files = [x for x in files if x.endswith(".txt")]
-        # print(len(files))
-
-        fragments = []
-        all_frags = []
-        vscolor_map = {}
-        escolor_map = {}
-
-        #Get IDs
-        IDs = ast.literal_eval(row["IDs"])
-
-        #Sample 1000 per month (to make this computationally tractable)
-        if len(IDs) > 1000:
-            IDs = sample(IDs, 1000)
-
-        #Store ids (for agave parallelization)
-        all_IDs[row["month"]] = IDs
-        
-        for f in tqdm(IDs):
-            if os.path.exists(fp + f + ".txt"):
-                with open(fp + f + ".txt") as f:
-                    lines = f.readlines()
-                    lines = [l.strip() for l in lines]
-            
-            else:
-                pass
-
-            #Isolate fragments lines
-            for i in range(len(lines)):
-                if lines[i] == "======":
-                    if lines[i + 1].startswith("Vertices"):
-                        #i+1 is the start of the fragment definition, i+5 is the end
-                        fragments.append(
-                            build_fragment(i + 1, i + 5, lines, vscolor_map,
-                                        escolor_map))
-
-            ## More testing - check isomorphism within a single output file
-            all_frags = check_iso(fragments, all_frags)
-
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + ".p", "wb"))
-
-    pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids.p", "wb"))
-
-    # print(vscolor_map)
-    # print(escolor_map)
-    # print("Unique fragment size:", len(all_frags))
-    # # for frag in all_frags:
-    # #     print(frag.vs["color"], frag.es["color"])
-    # #     print("----")
 
 
 if __name__ == "__main__":
