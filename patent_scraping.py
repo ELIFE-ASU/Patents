@@ -94,8 +94,9 @@ def get_author_patents(name):
     try:
         get_url = request.urlopen(href)
 
-        #Save record as JSON in Data/Patents
-        with open("Data/Patents/" + name.replace(" ", "_") + ".json", "w") as f:
+        #Save record as JSON in Data/Patents/Patent_Author_Records
+        with open("Data/Patents/Patent_Author_Records/" + 
+                  name.replace(" ", "_") + ".json", "w") as f:
             json_data = json.loads(get_url.read())
             json.dump(json_data, f, indent=4)
     except:

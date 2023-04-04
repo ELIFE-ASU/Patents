@@ -92,36 +92,36 @@ def parallel_runAssemblyGo(molfiles, fp):
 
 def main():
 
-    # #Read in sampled compounds (updated for full 1000 compounds)
-    # #NOTE: add "_NEW" for new compounds found in each year (remove for all compounds)
-    # cpds = pickle.load(file=open("Data/sample_inchi_1000.p", "rb"))
+    #Read in sampled compounds (updated for full 1000 compounds)
+    #NOTE: add "_NEW" for new compounds found in each year (remove for all compounds)
+    cpds = pickle.load(file=open("Data/sample_inchi_1000.p", "rb"))
 
-    # for year in np.arange(1987, 2020, 1):
-    #     #Set up parallelization - a bit of overhead for setting it up, but that's fine
-    #     pool = mp.Pool(64)
+    for year in np.arange(1987, 2020, 1):
+        #Set up parallelization - a bit of overhead for setting it up, but that's fine
+        pool = mp.Pool(64)
 
-    #     #Build months in a specific year
-    #     months = build_month_increments(year, year)
+        #Build months in a specific year
+        months = build_month_increments(year, year)
 
-    #     date_cpd_sets = []
-    #     for key, value in cpds.items():
-    #         if key in months:
-    #             for cpd in value:
-    #                 date_cpd_sets.append((key, cpd))
+        date_cpd_sets = []
+        for key, value in cpds.items():
+            if key in months:
+                for cpd in value:
+                    date_cpd_sets.append((key, cpd))
 
-    #     #Calculate assembly values for all inchis, save in a list holding dictionaries
-    #     assemblies = [
-    #         pool.apply(calculate_assembly, args=(s[0], s[1]))
-    #         for s in date_cpd_sets
-    #     ]
+        #Calculate assembly values for all inchis, save in a list holding dictionaries
+        assemblies = [
+            pool.apply(calculate_assembly, args=(s[0], s[1]))
+            for s in date_cpd_sets
+        ]
 
-    #     pool.close()
-    #     pool.join()
+        pool.close()
+        pool.join()
 
-    #     #NOTE: include '_FULL_' when sampling all compounds
-    #     pickle.dump(assemblies,
-    #                 file=open("Data/assembly_values_1000_FULL_" + str(year) + ".p",
-    #                           "wb"))
+        #NOTE: include '_FULL_' when sampling all compounds
+        pickle.dump(assemblies,
+                    file=open("Data/assembly_values_1000_FULL_" + str(year) + ".p",
+                              "wb"))
 
     ### Run AssemblyGo on full dataset
     # fp = "Data/AssemblyValues/FullDatabase/"
