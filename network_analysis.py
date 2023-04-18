@@ -1,6 +1,5 @@
-import numpy as np
 import pickle
-import pandas as pd
+from tqdm import tqdm
 
 
 def build_month_increments(start, stop):
@@ -37,47 +36,58 @@ def read_ids(fp):
     return pickle.load(file=open(fp, "rb"))
 
 
-def getIds(ids, allIds, lccIds, month):
+def getIds(ids, allIds, month):
     """ Finds all new SureChemBL IDs added in a given month, as well as 
     which of those compounds were added to the LCC (and those which weren't)
 
     Args:
         ids: monthly id 2D list (each sublist is a cluster, [0] is LCC)
         allIds: list of all SureChemBL ids seen thus far
-        lccIds: all ids present in LCC
         month: month of analysis
 
     Returns:
         newIds (list): all new ids added
-        newlccIds (list): all new ids which are present in LCC
-        existing_newlccIds (list): all ids which were previously found, but were added to LCC this month
-        nonlcc_newIds (list): all new ids that were NOT added to the LCC
     """
     #Get new ids
-    newIds = list(set([id for sublist in ids for id in sublist]) - set(allIds))
-    pickle.dump(newIds,
-                file=open(
-                    "/scratch/jmalloy3/Patents/CpdPatentIdsDates/newIds_" +
-                    month + ".p", "wb"))
+    newIds = list(set(ids) - set(allIds))
+    pickle.dump(
+        newIds,
+        file=open(
+            "/Volumes/Macintosh HD 4/SureChemBL/CpdPatentIdsDates/New_Ids/newIds_updated_"
+            + month + ".p", "wb"))
 
-    #All new LCC IDs that month
-    newlccIds = list(set(ids[0]) - set(lccIds))
-    pickle.dump(newlccIds,
-                file=open(
-                    "/scratch/jmalloy3/Patents/CpdPatentIdsDates/newlccIds_" +
-                    month + ".p", "wb"))
+    # #All new LCC IDs that month
+    # newlccIds = list(set(ids[0]) - set(lccIds))
+    # pickle.dump(newlccIds,
+    #             file=open(
+    #                 "/scratch/jmalloy3/Patents/CpdPatentIdsDates/newlccIds_" +
+    #                 month + ".p", "wb"))
 
-    #Existing compounds which were added to LCC
-    existing_newlccIds = list(set(newlccIds) - set(newIds))
+    # #Existing compounds which were added to LCC
+    # existing_newlccIds = list(set(newlccIds) - set(newIds))
 
-    #Finds the newIds which ARE NOT in the LCC
-    nonlcc_newIds = list(set(newIds) - set(ids[0]))
+    # #Finds the newIds which ARE NOT in the LCC
+    # nonlcc_newIds = list(set(newIds) - set(ids[0]))
 
-    return newIds, newlccIds, existing_newlccIds, nonlcc_newIds
+    return newIds
 
 
 def calculate_LCC_stats(allIds, lccIds, newIds, newlccIds, existing_newlccIds,
-                    nonlcc_newIds, month):
+                        nonlcc_newIds, month):
+    """ Left over from largest connected component analysis
+
+    Args:
+        allIds (list): all IDs found up to a given month
+        lccIds (list): all IDs in the LCC
+        newIds (list): novel IDs
+        newlccIds (list): novel IDs, only those in the largest connected component
+        existing_newlccIds (list): new-to-the-LCC ids
+        nonlcc_newIds (list): new IDs which are not part of the LCC
+        month (str): month to analyze
+
+    Returns:
+        list: descriptive stats of the LCC
+    """
 
     return [
         month,  #Month of analysis
@@ -98,35 +108,27 @@ def calculate_LCC_stats(allIds, lccIds, newIds, newlccIds, existing_newlccIds,
 
 def main():
     #Set up first month
-    ids = read_ids("/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_1980-01.p")
-    allIds = list(set([id for sublist in ids for id in sublist]))
-    lccIds = ids[0]
+    fp = "/Volumes/Macintosh HD 4/SureChemBL/CpdPatentIdsDates/Unique_Cpds/"
+    ids = read_ids(fp + "unique_cpds_1962-01.p")
+    allIds = list(set(ids))
+    # lccIds = ids[0] ## Leftover from largest connected component analysis
 
-    stats = []
+    for month in tqdm(build_month_increments(1963, 2022)):
+        ### FIND NEW COMPOUNDS ###
+        ids = read_ids(fp + "unique_cpds_" + month + ".p")
 
-    for month in build_month_increments(1980,2019):
-        ### LCC STATS ###
-        ids = read_ids("/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_" +
-                       month + ".p")
-        # ids_2 = read_ids("Data/NetworkStats/lcc_ids_1980-03.p")
-
-        newIds, newlccIds, existing_newlccIds, nonlcc_newIds = getIds(
-            ids, allIds, lccIds, month)
-        stats.append(
-            calculate_LCC_stats(allIds, lccIds, newIds, newlccIds,
-                            existing_newlccIds, nonlcc_newIds, month))
+        newIds = getIds(ids, allIds, month)
 
         allIds.extend(newIds)
-        lccIds.extend(newlccIds)        
 
-    ### LCC OUTPUT ###
-    df = pd.DataFrame(stats,
-                      columns=[
-                          "month", "newIds", "newIds_newLCC", "newIds_nonLCC",
-                          "oldIds_newLCC", "newIdsinLCC_percentage",
-                          "oldIdsNewinLCC_percentage", "totalIds", "totalLCCIds"
-                      ])
-    df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/lcc_stats_TEST.csv")
+    # ### LCC OUTPUT ###
+    # df = pd.DataFrame(stats,
+    #                   columns=[
+    #                       "month", "newIds", "newIds_newLCC", "newIds_nonLCC",
+    #                       "oldIds_newLCC", "newIdsinLCC_percentage",
+    #                       "oldIdsNewinLCC_percentage", "totalIds", "totalLCCIds"
+    #                   ])
+    # df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/lcc_stats_TEST.csv")
 
 
 if __name__ == "__main__":

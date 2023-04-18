@@ -94,9 +94,9 @@ def main():
 
     #Read in sampled compounds (updated for full 1000 compounds)
     #NOTE: add "_NEW" for new compounds found in each year (remove for all compounds)
-    cpds = pickle.load(file=open("Data/sample_inchi_1000.p", "rb"))
+    cpds = pickle.load(file=open("Data/sample_inchi_1000_2020-2022.p", "rb"))
 
-    for year in np.arange(1987, 2020, 1):
+    for year in np.arange(2020, 2023, 1):
         #Set up parallelization - a bit of overhead for setting it up, but that's fine
         pool = mp.Pool(64)
 
@@ -148,10 +148,10 @@ def main():
     # molfiles = os.listdir(fp)
     # parallel_runAssemblyGo(molfiles, fp)
 
-    ### AssemblyGo on author compound directories
-    fp = "Data/AssemblyValues/AssigneeCpds/"
-    molfiles = os.listdir(fp)
-    parallel_runAssemblyGo(molfiles, fp)
+    # ### AssemblyGo on author compound directories
+    # fp = "Data/AssemblyValues/AssigneeCpds/"
+    # molfiles = os.listdir(fp)
+    # parallel_runAssemblyGo(molfiles, fp)
 
 
 if __name__ == "__main__":
