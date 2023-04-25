@@ -86,7 +86,7 @@ def build_fragment(start, end, lines, vscolor_map, escolor_map):
     return g
 
 
-def check_iso(candidate_fragments, all_frags):
+def check_iso(candidate_fragments, all_frags, frag_count):
     """ Finds the unique fragments within a set of candidates
 
     Args:
@@ -100,24 +100,26 @@ def check_iso(candidate_fragments, all_frags):
     for possible_f in candidate_fragments:
         is_unique = True
         #...against all unique fragments
-        for f in all_frags:
-            if possible_f.isomorphic_vf2(f,
+        for i in range(len(all_frags)):
+            if possible_f.isomorphic_vf2(all_frags[i],
                                             color1=possible_f.vs["color"],
-                                            color2=f.vs["color"],
+                                            color2=all_frags[i].vs["color"],
                                             edge_color1=possible_f.es["color"],
-                                            edge_color2=f.es["color"]):
+                                            edge_color2=all_frags[i].es["color"]):
                     #if candidate is isomorphic, it is not unique, therefore break off check
                     is_unique = False
                     
             if not is_unique:
+                frag_count[i] += 1
                 break
 
         #If it makes it through the full list of fragments, it is unique!
         if is_unique:
             all_frags.append(possible_f)
+            frag_count[len(all_frags) -1 ] = 1 #Start count at 1
 
     #Return updated full list
-    return all_frags
+    return all_frags, frag_count
 
 
 def build_month_increments(start, stop):
@@ -166,6 +168,7 @@ def main():
 
         fragments = []
         all_frags = []
+        frag_count = {}
         vscolor_map = {}
         escolor_map = {}
 
@@ -198,11 +201,13 @@ def main():
                                         escolor_map))
 
             ## More testing - check isomorphism within a single output file
-            all_frags = check_iso(fragments, all_frags)
+            all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
 
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + ".p", "wb"))
+        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + "_updated.p", "wb"))
+        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFragsCount_" + row["month"] + "_updated.p", "wb"))
 
-    pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids.p", "wb"))
+
+    pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids_updated.p", "wb"))
 
     # print(vscolor_map)
     # print(escolor_map)

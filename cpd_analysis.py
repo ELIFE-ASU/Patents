@@ -219,7 +219,7 @@ def sample_compounds_unique(n, months, cpd_df):
 
     print("\n----- Saving compounds -----")
     pickle.dump(sample_inchis,
-                file=open("Data/sample_inchi_1000_NEW_2020-2022.p", "wb"))
+                file=open("Data/sample_inchi_1000_NEW_1976-1979.p", "wb"))
 
 
 def sample_compounds(n, months, cpd_df):
@@ -236,6 +236,7 @@ def sample_compounds(n, months, cpd_df):
 
     #Inchis for all sampled compounds
     sample_inchis = {}
+    sample_ids = {}
 
     fp = "/Volumes/Macintosh HD 4/SureChemBL/CpdPatentIdsDates/Unique_Cpds/"
     print("----- Sampling Full Compounds ------\n")
@@ -246,11 +247,12 @@ def sample_compounds(n, months, cpd_df):
 
         sub_df = cpd_df[cpd_df["SureChEMBL_ID"].isin(sample_cpds)]
         sample_inchis[month] = list(sub_df["InChI"])
+        sample_ids[month] = list(sub_df["SureChEMBL_ID"])
 
     #Save sampled inchis to pickle files
     print("\n----- Saving Data -----")
     pickle.dump(sample_inchis,
-                file=open("Data/sample_inchi_" + str(n) + "_2020-2022.p", "wb"))
+                file=open("Data/sample_inchi_" + str(n) + "_1976-1979.p", "wb"))
 
 
 def main():
@@ -271,8 +273,8 @@ def main():
     # find_llanos_cpds(data_fp, cpd_df)
 
     ### Sampling compounds for MA analysis ###
-    sample_compounds_unique(1000, build_month_increments(2020, 2022), cpd_df)
-    sample_compounds(1000, build_month_increments(2020, 2022), cpd_df)
+    sample_compounds_unique(1000, build_month_increments(1976, 1979), cpd_df)
+    sample_compounds(1000, build_month_increments(1976, 1979), cpd_df)
 
     ### MA Analysis ###
 

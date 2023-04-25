@@ -81,7 +81,7 @@ def build_fragment(start, end, lines, vscolor_map, escolor_map):
 
     return g
 
-def check_iso(candidate_fragments, all_frags):
+def check_iso(candidate_fragments, all_frags, all_frags_dates, month):
     """ Finds the unique fragments within a set of candidates
 
     Args:
@@ -103,6 +103,8 @@ def check_iso(candidate_fragments, all_frags):
                                             edge_color2=f.es["color"]):
                     #if candidate is isomorphic, it is not unique, therefore break off check
                     is_unique = False
+                    #If the candidate is ismorphic, it is already in the all_frags database, and therefore is already present
+                    all_frags_dates[possible_f].append(month)
                     
             if not is_unique:
                 break
@@ -110,9 +112,10 @@ def check_iso(candidate_fragments, all_frags):
         #If it makes it through the full list of fragments, it is unique!
         if is_unique:
             all_frags.append(possible_f)
+            all_frags_dates[possible_f] = [month]
 
     #Return updated full list
-    return all_frags
+    return all_frags, all_frags_dates
 
 def find_fragments(month, IDs, fp):
     """ Find the fragments associated with a 1000-cpd sample of MA outputs
@@ -127,13 +130,16 @@ def find_fragments(month, IDs, fp):
     print("--- Analyzing", month, "---")
     fragments = []
     all_frags = []
+    all_frags_dates = {}
     lines = []
     vscolor_map = {}
     escolor_map = {}
+    count = 0
 
     #Make sure assembly output file exists
     for f in IDs:
         if os.path.exists("Data/AssemblyValues/AuthorCpds_Done/" + f + ".txt"):
+            count += 1
             with open("Data/AssemblyValues/AuthorCpds_Done/" + f + ".txt") as f:
                 lines = f.readlines()
                 lines = [l.strip() for l in lines]
@@ -150,10 +156,12 @@ def find_fragments(month, IDs, fp):
                         build_fragment(i + 1, i + 5, lines, vscolor_map,
                                     escolor_map))
 
-        ## Check isomorphism within a single output file (all_frags is empty at the beginning on purpose)
-        all_frags = check_iso(fragments, all_frags)
 
-    pickle.dump(all_frags, file=open(fp + "authorFrags_" + month + ".p", "wb"))
+        ## Check isomorphism within a single output file (all_frags is empty at the beginning on purpose)
+        all_frags, all_frags_dates = check_iso(fragments, all_frags, all_frags_dates, month)
+
+    pickle.dump(all_frags, file=open(fp + "authorFragsTEST_" + month + ".p", "wb"))
+    pickle.dump(all_frags_dates, file=open(fp + "authorFragsDatesTEST_" + month + ".p", "wb"))
 
 
 def run_fragments(all_IDs, fp):

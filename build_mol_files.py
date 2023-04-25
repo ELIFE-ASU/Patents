@@ -24,6 +24,19 @@ def inchi_to_mol(inchi, index, database):
         pass
 
 
+def prep_sampled_inchis(samples, database):
+    """ Organize sampled inchis into correctly labeled mol files (month-integer.mol)
+
+    Args:
+        samples (dict): {month:[inchis]} of sampled inchis
+        database (str): what data (either FullDatabase or NewDatabase) is being analyzed
+    """
+    for month, inchis in samples.items():
+        print("--- Building", month, "---")
+        for i in tqdm(range(len(inchis))):
+            inchi_to_mol(inchis[i], month + "_" + str(i), database)
+
+
 def move_completed_files(fp):
     """ Moves completed MA files from analysis directory to completed directory
 
@@ -92,31 +105,27 @@ def move_completed_files(fp):
 
     print("----- Moving Author Cpds -----")
     completed_files = [
-        x for x in os.listdir(fp + "/AuthorCpds/")
-        if x.endswith(".txt")
+        x for x in os.listdir(fp + "/AuthorCpds/") if x.endswith(".txt")
     ]
     for f in tqdm(completed_files):
         try:
-            os.rename(fp + "/AuthorCpds/" + f,
-                    fp + "/AuthorCpds_Done/" + f)
-        except OSError as e :
+            os.rename(fp + "/AuthorCpds/" + f, fp + "/AuthorCpds_Done/" + f)
+        except OSError as e:
             print(e)
         try:
             os.rename(
-            fp + "/AuthorCpds/" + f[:-4] + ".mol",
-            fp + "/AuthorCpds_Done/" + f[:-4] + ".mol",
+                fp + "/AuthorCpds/" + f[:-4] + ".mol",
+                fp + "/AuthorCpds_Done/" + f[:-4] + ".mol",
             )
         except OSError as e:
             print(e)
 
     print("----- Moving Assignee Cpds -----")
     completed_files = [
-        x for x in os.listdir(fp + "/AssigneeCpds/")
-        if x.endswith(".txt")
+        x for x in os.listdir(fp + "/AssigneeCpds/") if x.endswith(".txt")
     ]
     for f in tqdm(completed_files):
-        os.rename(fp + "/AssigneeCpds/" + f,
-                  fp + "/AssigneeCpds_Done/" + f)
+        os.rename(fp + "/AssigneeCpds/" + f, fp + "/AssigneeCpds_Done/" + f)
         os.rename(
             fp + "/AssigneeCpds/" + f[:-4] + ".mol",
             fp + "/AssigneeCpds_Done/" + f[:-4] + ".mol",
@@ -129,6 +138,18 @@ def main():
 
     #Disable RDKit logger
     RDLogger.DisableLog("rdApp.*")
+
+    ## Sampled inchis to mol files - full & new database
+    print("---- Sampled InChIs - Full Database ----")
+    samples = pickle.load(file=open("Data/sample_inchi_1000_1976-1979.p", "rb"))
+
+    prep_sampled_inchis(samples, "FullDatabase")
+
+    print("---- Sampled InChIs - New Database ----")
+    samples = pickle.load(
+        file=open("Data/sample_inchi_1000_NEW_1976-1979.p", "rb"))
+
+    prep_sampled_inchis(samples, "NewDatabase")
 
     # ## Full database to mol files
     # print("------ Full Database -----")
@@ -163,7 +184,7 @@ def main():
     #     axis=1)
 
     ## Move completed MA files on Agave
-    move_completed_files("Data/AssemblyValues")
+    # move_completed_files("Data/AssemblyValues")
 
 
 if __name__ == "__main__":
