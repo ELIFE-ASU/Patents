@@ -102,13 +102,13 @@ def check_iso(candidate_fragments, all_frags, frag_count):
         #...against all unique fragments
         for i in range(len(all_frags)):
             if possible_f.isomorphic_vf2(all_frags[i],
-                                            color1=possible_f.vs["color"],
-                                            color2=all_frags[i].vs["color"],
-                                            edge_color1=possible_f.es["color"],
-                                            edge_color2=all_frags[i].es["color"]):
-                    #if candidate is isomorphic, it is not unique, therefore break off check
-                    is_unique = False
-                    
+                                         color1=possible_f.vs["color"],
+                                         color2=all_frags[i].vs["color"],
+                                         edge_color1=possible_f.es["color"],
+                                         edge_color2=all_frags[i].es["color"]):
+                #if candidate is isomorphic, it is not unique, therefore break off check
+                is_unique = False
+
             if not is_unique:
                 frag_count[i] += 1
                 break
@@ -116,7 +116,7 @@ def check_iso(candidate_fragments, all_frags, frag_count):
         #If it makes it through the full list of fragments, it is unique!
         if is_unique:
             all_frags.append(possible_f)
-            frag_count[len(all_frags) -1 ] = 1 #Start count at 1
+            frag_count[len(all_frags) - 1] = 1  #Start count at 1
 
     #Return updated full list
     return all_frags, frag_count
@@ -145,69 +145,125 @@ def build_month_increments(start, stop):
     return months
 
 
+def get_files(fp, labels):
+    """ Find all file paths to specific log files to analyze
+
+    These all correspond to fully completed MAs
+
+    Args:
+        fp (str): filepath to overall AssemblyValue directory
+        labels (list): all labels of completed MAs
+
+    Returns:
+        (list): list of all filepaths
+    """
+    possible_dataSources = ["AuthorCpds_Done/", "AssigneeCpds_Done/"]
+
+    fps = []
+    for label in labels:
+        if "SCHEMBL" in label:
+            for dataSource in possible_dataSources:
+                if os.path.exists(fp + dataSource + label + ".txt"):
+                    fps.append(fp + dataSource + label + ".txt")
+                    break
+        elif label.endswith("_new"):
+            fps.append(fp + "NewDatabase_Done/"+ label[:-4] +
+                       ".txt")
+        elif label.endswith("_full"):
+            fps.append(fp + "FullDatabase_Done/" + label[:-4] +
+                       ".txt")
+
+    return fps
+
+
 def main():
-    ### Using Author Cpds Done to build fragments 
-    
+    ### Using Author Cpds Done to build fragments
+
     # fp = "Data/AssemblyValues/NewDatabase_Done/" #old newdatabase code
-    fp = "Data/AssemblyValues/AuthorCpds_Done/"
 
-    # months = build_month_increments(1980, 2020) #old newdatabase code
+    MA_df_completed = pd.read_csv(
+        "Data/AssemblyValues/ALLSAMPLEDcpds_AssemblyGo_COMPLETED.csv")
 
-    df = pd.read_csv("Data/ID_months.csv")
+    print(MA_df_completed.head())
 
-    all_IDs = {}
+    print(type(list(MA_df_completed["earliest_date"])[0]))
 
-    # for month in months:
-    for index, row in df.iterrows(): #, total=df.shape[0]):
-        # print("--- Analyzing", row["month"], "---")
+    month = "1980-01"
+    month_df = MA_df_completed[MA_df_completed["earliest_date"].str.startswith(
+        month)].sample(1000)
 
-        # #Old newdatabase code 
-        # files = [x for x in os.listdir(fp) if x.startswith(month)]
-        # files = [x for x in files if x.endswith(".txt")]
-        # print(len(files))
+    print(month_df)
 
-        fragments = []
-        all_frags = []
-        frag_count = {}
-        vscolor_map = {}
-        escolor_map = {}
+    files = get_files("Data/AssemblyValues/", list(month_df["label"]))
+    print(files)
 
-        #Get IDs
-        IDs = ast.literal_eval(row["IDs"])
+    # labels = []
+    # for index, row in tqdm(MA_df_completed.iterrows(),
+    #                        total=len(MA_df_completed)):
+    #     labels.append(get_labels(row["label"], row["earliest_date"]))
 
-        #Sample 1000 per month (to make this computationally tractable)
-        if len(IDs) > 1000:
-            IDs = sample(IDs, 1000)
+    # print(labels[0:10])
 
-        #Store ids (for agave parallelization)
-        all_IDs[row["month"]] = IDs
-        
-        for f in tqdm(IDs):
-            if os.path.exists(fp + f + ".txt"):
-                with open(fp + f + ".txt") as f:
-                    lines = f.readlines()
-                    lines = [l.strip() for l in lines]
-            
-            else:
-                pass
+    # fp = "Data/AssemblyValues/"
 
-            #Isolate fragments lines
-            for i in range(len(lines)):
-                if lines[i] == "======":
-                    if lines[i + 1].startswith("Vertices"):
-                        #i+1 is the start of the fragment definition, i+5 is the end
-                        fragments.append(
-                            build_fragment(i + 1, i + 5, lines, vscolor_map,
-                                        escolor_map))
+    # # months = build_month_increments(1980, 2020) #old newdatabase code
 
-            ## More testing - check isomorphism within a single output file
-            all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
+    # df = pd.read_csv("Data/ID_months.csv")
 
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + "_updated.p", "wb"))
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFragsCount_" + row["month"] + "_updated.p", "wb"))
+    # all_IDs = {}
 
+    # # for month in months:
+    # for index, row in df.iterrows(): #, total=df.shape[0]):
+    #     # print("--- Analyzing", row["month"], "---")
 
-    pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids_updated.p", "wb"))
+    #     # #Old newdatabase code
+    #     # files = [x for x in os.listdir(fp) if x.startswith(month)]
+    #     # files = [x for x in files if x.endswith(".txt")]
+    #     # print(len(files))
+
+    #     fragments = []
+    #     all_frags = []
+    #     frag_count = {}
+    #     vscolor_map = {}
+    #     escolor_map = {}
+
+    #     #Get IDs
+    #     IDs = ast.literal_eval(row["IDs"])
+
+    #     #Sample 1000 per month (to make this computationally tractable)
+    #     if len(IDs) > 1000:
+    #         IDs = sample(IDs, 1000)
+
+    #     #Store ids (for agave parallelization)
+    #     all_IDs[row["month"]] = IDs
+
+    #     for f in tqdm(IDs):
+    #         if os.path.exists(fp + f + ".txt"):
+    #             with open(fp + f + ".txt") as f:
+    #                 lines = f.readlines()
+    #                 lines = [l.strip() for l in lines]
+
+    #         else:
+    #             pass
+
+    #         #Isolate fragments lines
+    #         for i in range(len(lines)):
+    #             if lines[i] == "======":
+    #                 if lines[i + 1].startswith("Vertices"):
+    #                     #i+1 is the start of the fragment definition, i+5 is the end
+    #                     fragments.append(
+    #                         build_fragment(i + 1, i + 5, lines, vscolor_map,
+    #                                     escolor_map))
+
+    #         ## More testing - check isomorphism within a single output file
+    #         all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
+
+    #     pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/authorFrags_" + row["month"] + "_updated.p", "wb"))
+    #     pickle.dump(frag_count, file=open("Data/AssemblyValues/Fragments/authorFragsCount_" + row["month"] + "_updated.p", "wb"))
+
+    # pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids_updated.p", "wb"))
+    # pickle.dump(vscolor_map, file=open("Data/AssemblyValues/Fragments/vscolor_map.p", "rb"))
+    # pickle.dump(escolor_map, file=open("Data/AssemblyValues/Fragments/vscolor_map.p", "rb"))
 
     # print(vscolor_map)
     # print(escolor_map)
