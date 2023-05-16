@@ -27,6 +27,29 @@ The data for this project (will be) stored on Cradle in the `SureChemBL` directo
 
 - `master_cpd_date_index_df.p`: pandas dataframe linking cpd ID, dates, and SureChemBL index (CHECK)
 
+### AssemblyValues
+
+Contains all assembly & fragment data - some old data (specifically, 1000 sampled compounds per month from both the full database and new compounds) from earlier iterations of the assembly calculator are in the `Old Assembly Results` directory.
+
+- `AssigneeCpds_Done`: XX compounds, from patents associated from a random set of YY patent assignees. The name of every .txt file is the SureChemBL Id of the compound.
+
+- `AuthorCpds_Done`: XX compounds, from patents associated from a random set of YY patent authors. The name of every .txt file is the SureChemBL Id of the compound.
+
+- `FullDatabase_Done`: XX compounds, randomly sampled from the full set of compounds available in the SureChemBL database at every month. Labeled by the sampled month.
+
+- `NewDatabase_Done`: XX compounds, randomly sampled from the set of compounds which were new (not previously entered) to theSureChemBL database at every month. Labeled by the sampled month.
+
+- `CostRandom`: 50,000 compounds, from a subset of Reaxys which Hessam Mehr & Dario Caramelli were able to extract cost data from.
+
+- **Fragments**: Fragment data - contains all sampled IDs (including file paths) (`all_ids.p`), test fragment samples from the author MA compounds only, as well as full fragments (fullFrags*) and counts (fullFragsCounts*) of fragments from all completed data, regardless of intitial sampling. Also includes two dictionaries mapping iGraph color values to elements & bonds (`vscolor.p` and `escolor.p`)
+
+### Attachment_noNetworks
+
+Contains preferential attachment values & compound degrees for all 5-year increments. These values were calculated using degrees only, with no iGraph networks involved.
+
+### Cost
+
+Summary data, including .csv files with MAs & dates associated with all 50,000 sampled compounds from Hessam's & Dario's sampling.
 
 
 ## Usage/Examples
