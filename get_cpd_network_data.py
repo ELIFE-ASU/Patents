@@ -47,7 +47,7 @@ def read_cpdcpd_graph(update):
     """ Reads a cpd-cpd graph in .gmlz format
 
     Takes a stored igraph network in .gmlz format and reads it into igraph form.
-    Assumes that the data are stored in the /scratch/jmalloy3/Graphs/ directory and in the format
+    Assumes that the data are stored in the /Volumes/Macintosh HD 4/SureChemBL/Graphs/G_Cpd directory and in the format
     G_cpd_<update>.gmlz.
 
     Args:
@@ -56,10 +56,8 @@ def read_cpdcpd_graph(update):
     Returns:
         G (igraph object): cpd-cpd network pertaining to a specific update
     """
-    fp = "/scratch/jmalloy3/Graphs/G_cpd_" + update + ".p"
-    #fp = "G:\\Shared drives\\SureChemBL_Patents\\Graphs\\G_cpd_" + update + ".p"
-    print(fp)
-    G = pickle.load(open(fp, "rb"))
+    fp = "../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/G_Cpd/G_cpd_" + update + ".gmlz"
+    G = ig.Graph.Read_GraphMLz(fp)
     print("Loaded graph:", update)
     print(ig.summary(G))
 
@@ -91,12 +89,12 @@ def get_network_stats(start, stop):
     data = []
 
     for update in updates:
-        subprocess.run([
-            "rclone",
-            "copy",
-            "SureChemBL_Patents:Graphs/G_cpd_" + update + ".p",
-            "/scratch/jmalloy3/Graphs/",
-        ])
+        # subprocess.run([
+        #     "rclone",
+        #     "copy",
+        #     "SureChemBL_Patents:Graphs/G_cpd_" + update + ".p",
+        #     "/scratch/jmalloy3/Graphs/",
+        # ])
 
         G = read_cpdcpd_graph(update)
         network_stats = {}
@@ -114,20 +112,27 @@ def get_network_stats(start, stop):
         print()
         data.append(network_stats)
 
+        #Writing every month of stastistics, degrees, and ID degrees
+        df = pd.DataFrame(data)
+        pickle.dump(df,
+                file=open(
+                    "../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/stats_" + str(start) + "_" +
+                    str(stop) + ".p", "wb"))
+
         pickle.dump(degrees,
                     file=open(
-                        "/scratch/jmalloy3/Degrees/Months/degrees_" + update +
+                        "../../mnt/Archive/Shared/PatentData/SureChemBL/Degrees/Months/Degrees/degrees_" + update +
                         ".p", "wb"))
 
         pickle.dump(id_degrees,
                     file=open(
-                        "/scratch/jmalloy3/Degrees/Months/id_degrees_" +
+                        "../../mnt/Archive/Shared/PatentData/SureChemBL/Degrees/Months/IdDegrees/id_degrees_" +
                         update + ".p", "wb"))
 
     df = pd.DataFrame(data)
     pickle.dump(df,
                 file=open(
-                    "/scratch/jmalloy3/NetworkStats/stats_" + str(start) + "_" +
+                    "../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/stats_" + str(start) + "_" +
                     str(stop) + ".p", "wb"))
 
 
@@ -388,8 +393,8 @@ def build_increments(start, stop, increment):
     return year_increments
 
 def main():
-    start = 1980
-    stop = 1981
+    start = 2021
+    stop = 2022
 
     ## NOTE: building preferential attachement across entire network
 
@@ -401,13 +406,18 @@ def main():
     #     start, stop = inc[0], inc[1]
 
     #Calculate basic high-level network stats from SureChemBL updates
-    #get_network_stats(start, stop)
+    get_network_stats(start, stop)
+
+    start = 1976
+    stop = 1979
+    get_network_stats(start, stop)
+
 
     # # #Store all degree distributions in a single list
     # # #get_degree_distributions()
 
-    #Calculate preferential attachment index for a range of the SureChemBL dataset
-    calculate_preferential_attachment(start, stop)
+    # #Calculate preferential attachment index for a range of the SureChemBL dataset
+    # calculate_preferential_attachment(start, stop)
 
     #clear_scratch(start, stop)
 

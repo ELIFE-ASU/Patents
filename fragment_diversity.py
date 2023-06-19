@@ -181,7 +181,7 @@ def main():
     MA_df_completed = pd.read_csv(
         "Data/AssemblyValues/ALLSAMPLEDcpds_AssemblyGo_COMPLETED.csv")
 
-    months = build_month_increments(2013, 2022)
+    months = build_month_increments(1976, 2022)
 
     all_IDs = {}
     vscolor_map = {}
@@ -202,8 +202,9 @@ def main():
         ## Sample month compounds
         month_df = MA_df_completed[MA_df_completed["earliest_date"].str.startswith(
             month)]
-        if len(month_df) > 1000:
-            month_df = month_df.sample(1000)
+        n = 1000
+        if len(month_df) > n:
+            month_df = month_df.sample(n)
 
         files = get_files("Data/AssemblyValues/", list(month_df["label"]))
 
@@ -232,15 +233,18 @@ def main():
             ## More testing - check isomorphism within a single output file
             all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
 
-        print(all_frags)
-        print(frag_count)
+        #To ensure these are the same values
+        print("Num Frags:", len(all_frags))
+        print("Num Frags Count", len(frag_count))
+
+        print("\n")
 
         pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/fullFrags_" + month + ".p", "wb"))
         pickle.dump(frag_count, file=open("Data/AssemblyValues/Fragments/fullFragsCount_" + month + ".p", "wb"))
 
     pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids_updated.p", "wb"))
     pickle.dump(vscolor_map, file=open("Data/AssemblyValues/Fragments/vscolor_map.p", "wb"))
-    pickle.dump(escolor_map, file=open("Data/AssemblyValues/Fragments/vscolor_map.p", "wb"))
+    pickle.dump(escolor_map, file=open("Data/AssemblyValues/Fragments/escolor_map.p", "wb"))
 
     print(vscolor_map)
     print(escolor_map)
