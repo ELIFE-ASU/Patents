@@ -7,6 +7,131 @@
 Uses data from the SureChEMBL database to analyze
 compound usage over time within patents.
 
+## Code
+
+This code performs a variety of tasks relating to network & molecular assembly analysis of the SureChemBL database. The various scripts are organized here by tasks - individual files & methods have comments within them describing their exact usages.
+
+### Chemical Properties (MA, MW, bonds, etc...) Visualizations
+
+- `MA_distribution.ipynb`
+
+Visualizes MA & Molecular Weight distribution (x-axis: MA, y-axis: count) for compounds sampled from different 5-year intervals. 
+
+- `assembly_analysis.ipynb`
+
+Workhorse jupyter notebook containing various ideas & graphs for visualizing MA data. These visualizations mainly resulted in the chemical properties & social factors figures in the manuscript, as well as a number of SI figures. The topics found in this notebook include: New Compound MA vs Full Database MA (and various tests, including an expected MA from molecular weight, wasserstein tests between new & full compounds, and normal distribution tests for each month of sampling); MA increases across all types of sampling; MA distributions over time intervals (similar to `MA_distribution.ipynb`); Molecular Weight time series analyses; Molecular Weight & MA spearman correlations & plots, including exact & inexact MA values; Bonds & MA spearman correlations and plots, also including exact & inexact MA values; MA predictions using ML techniques, particularly exponential smoothing; MA & Degree (usage) correlations; and preliminary fragment analysis.
+
+- `fragment_diversity.ipynb`
+
+Tests various fragment hypothesis - number of unique fragments over time (more detailed figure is in chemical properties manuscript figure), different types of fragments over time, time-ordering of fragment analyses (forward in time, reversed, and mixed) which tests if innovative fragments are based on historical contigencies, and fragment/copy number log/log plots. Also has some potential tests (e.g., relative frequency of high-bond count fragments) at the end which could be interesting.
+
+### Chemical Properties (MW, MW, bonds, etc...) Analysis & Data Collection
+
+- `assemblyCalcs_cheminformatics.py`
+
+** Outdated ** Calculates molecular weight from sampled compounds (MA is already calculated for these compounds).
+
+Uses RDKit MolDescriptors library to calculate molecular weight
+
+Outdated because there are more integrated methods of calculating molecular weight (along with bonds & other chemical descriptors) in other scripts.
+
+- `assemblyCalcs_degrees.py`
+
+Links MA values of compounds with network degree. These data are used in the social factors figure, where degree represents usage. The hypothesis is that degree (usage) has an influence on the MA of the compound. Also links different quantiles of degrees (e.g., 90th percentile of degrees) with MA.
+
+- `assemblyCalcs_percentiles.py`
+
+** Outdated ** Calculates MA values of compounds with high preferential attachment value. The hypothesis was that high-attachment compounds have lower MA, but this line of questioning was replaced by a degree analysis. Also uses the old Monte-Carlo based MA calculation instead of the updated AssemblyGo package.
+
+- `assemblyCalcs_samples.py`
+
+** Main Assembly Calculation Script ** Calculates MA values in parallel using AssemblyGo package with a timeout of 300 seconds. This script was used to calculate MA values over Full samples, New samples, cost data, author/assignee samples, and other data sources.
+
+- `assembly_analysis.py`
+
+Links MA calculations with molecular weight & bonds. 
+
+- `build_mol_files.py`
+
+Takes InChI representations of data (standard SureChemBL storage) and converts them into molecular object files (.mol, also can used as .sdf), which is necessary for AssemblyGo MA calculations. This script also takes completed MA .txt files and moves them into the correct directory structure on Agave.
+
+- `cpd_similarity.ipynb`
+
+Calculates the similarity between compounds invented within different 5-year time intervals. This was not used in the manuscript, but was based on the hypothesis that compounds invented near each other are more similar than those invented further away.
+
+- `fragment_diversity.py`
+
+Workhorse script which: finds fragments from MA .txt result files, builds fragments into iGraph objects, and determines if a given fragment is a unique fragment (given a specific time-ordering - see `fragment_diversity.ipynb` for different sequencing) using iGraph's isomorphic_vf2 test.
+
+- `fragment_diversity_parallel.py`
+
+** Outdated ** Failed attempt to parallelize `fragment_diversity.py` - abandoned due to sequencing, since each sampled set of MAs needed to have a specific ordering.
+
+- `get_MA_results.py`
+
+Takes .txt output files from the AssemblyGo algorithm and stores the label (identifying number/ID of the compound, listed as the first part of the filename), MA value, and time it took for the MA algorithm to complete as a .csv file.
+
+
+
+### Cost Vizualization & Analysis
+
+- `cost_influence.ipynb`
+
+Uses cost data (collected by Hessam Mehr & Dario Caramelli) & MA values to build correlations between price & MA. Also includes time-series analysis of cost over time. 
+
+- `cost_timewise_influence.py`
+
+Script to merge cost compounds (sampled separately from SureChemBL) with SureChemBL time-series data to build a time-series analysis (results & vizualization found in `cost_influence.ipynb`)
+
+### Network Vizualizations
+
+- `bipartite_network_analysis.ipynb`
+
+** Outdated ** Basic plots describing network stats (average degree, largest connected component size, number of edges, average clustering coefficient) for SureChemBL networks over time. Updated & better plots can be found in `network_analysis.ipynb` 
+
+- `network_analysis.ipynb`
+
+Plots describing bipartite network statistics, such as degree distributions & powerlaw fits, avg degree of both compounds and patents, sizes of compounds & patents and exponential fits, and largest connected compound sizes. Many of these plots are found in the SI, and the network stats manuscript figure is based on ideas first graphed here.
+
+- `occurance_viz.ipynb`
+
+** Outdated ** Basic plots representing the occurance of compounds within patents - these were an attempt to see if compounds followed a "rich-get-richer" model, which was found using preferential attachment instead.
+
+### Network Analysis
+
+- `get_bipartite_network_data.py`
+
+Calculates network statistics across the cpd-patent SureChemBL bipartite network by month, including number of nodes, edges, cpds, patents,  average degrees of both, and the largest connected component size. These data are used to build the network statistics manuscript figure.
+
+- `get_cpd_network_data.py`
+
+Builds & calculates network statistics for a compound-only SureChemBL network, which are individually built for each month. Statistics include nodes, edges, average & max degree, as well as largest connected component size and average clustering coefficient.
+
+- `network_analysis.py`
+
+Finds both new IDs (IDs which were previously not in the network previously - these are used as the basis for the New ID sampling for MA calculations) and largest connected component IDs.
+
+- `pageRank.ipynb`
+
+Basic plots & descriptions of PageRank analysis - this was an attempt to track innovative compounds over time, with the hypothesis of comopunds that have a high connectivity (or a highly variable, positive connectivity) are innovative.
+
+- `pageRank.py`
+
+Calculates PageRank statistics for all compounds & patents within the SureChemBL networks over months.
+
+### SureChemBL Data
+
+- `cpd_analysis.py`
+
+Samples compounds over months from novel compounds (`sample_compounds_unique()` method) and full database (`sample_compounds` method). Also includes various tests to find the highest degree compounds (see `assemblyCalcs_degrees.py`) and compounds from Llanos et al, 2019, as a hypothesis as to where specific compounds were listed in the database.
+
+
+### Societal Factors Vizualizations
+
+- `patent_MA_analysis.ipynb`
+
+Workhorse notebook, analyzes changes in MA across authors, assignees, and classifications - also organizes and samples from patent author/assignee/classification lists, as well as performs dropout tests. Various plots from here are found in the SI, and the delta-MA plots are the initial versions of the ones found in the societal factors manuscript figure.
+
 ## Data
 
 The data for this project (will be) stored on Cradle in the `SureChemBL` directory, as well as backed up on Alice Lab Mac. This describes the file structure of all data generated from SureChemBL, as well as descriptions. 
