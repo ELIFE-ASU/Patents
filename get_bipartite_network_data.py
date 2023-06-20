@@ -313,7 +313,7 @@ def main():
     #build_master_cpd_date(updates) #NOTE: should only be run once
     #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
 
-    G = pickle.load(file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_G_FULL.p", "rb"))
+    G = pickle.load(file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_G.p", "rb"))
     print(ig.summary(G))
 
     for month in updates:
