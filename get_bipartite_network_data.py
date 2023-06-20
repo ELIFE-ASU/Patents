@@ -106,14 +106,18 @@ def get_earlier_cpds(month):
         first entry, and igraph index
     """
     #Read in master compound-date-index dataframe
-    agave_fp = "Data/Cpd_Data/master_cpd_date_index_df.p"
+    master_fp = "../../../mnt/Archive/Shared/PatentData/SureChemBL/Data/Cpd_Data/master_cpd_date_index_df.p"
     #drive_fp = "G:/Shared drives/SureChemBL_Patents/Cpd_Data/master_cpd_date_index_df.p"
-    df = pickle.load(file=open(agave_fp, "rb"))
+    df = pickle.load(file=open(master_fp, "rb"))
+
+    sub_df = df[df["Month"] <= month]
+
+    del (df)
 
     # #Small dataframe analysis
     # check_indicies(df)
 
-    return df[df["Month"] <= month]
+    return sub_df
 
 
 def build_subgraph(G, month):
@@ -146,7 +150,7 @@ def build_subgraph(G, month):
 
     pickle.dump(
         G_sub,
-        file=open("/scratch/jmalloy3/Patents/Graphs/cpd_patent_" + month + ".p",
+        file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_" + month + ".p",
                   "wb"))
 
     return G_sub
@@ -258,7 +262,7 @@ def get_network_stats(G, month):
 
     network_stats["LCC Size"] = G.clusters().giant().vcount()
     #TODO: LCC SureChemBL ids
-    lcc_ids = [G.vs.select(c)["name"] for c in G.clusters()]
+    # lcc_ids = [G.vs.select(c)["name"] for c in G.clusters()]
 
     #network_stats["Clustering coefficient"] = G.transitivity_undirected()
 
@@ -278,28 +282,28 @@ def get_network_stats(G, month):
 
     pickle.dump(cpd_degrees,
                 file=open(
-                    "/scratch/jmalloy3/Degrees/Months/cpd_degrees_" + month +
+                    "../../../mnt/Archive/Shared/PatentData/SureChemBL/Degrees/CpdDegrees/cpd_degrees_" + month +
                     ".p", "wb"))
 
     pickle.dump(patent_degrees,
                 file=open(
-                    "/scratch/jmalloy3/Degrees/Months/patent_degrees_" + month +
+                    "../../../mnt/Archive/Shared/PatentData/SureChemBL/Degrees/PatentDegrees/patent_degrees_" + month +
                     ".p", "wb"))
 
-    pickle.dump(lcc_ids,
-                file=open(
-                    "/scratch/jmalloy3/Patents/NetworkStats/lcc_ids_" + month +
-                    ".p", "wb"))
+    # pickle.dump(lcc_ids,
+    #             file=open(
+    #                 "../../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/lcc_ids_" + month +
+    #                 ".p", "wb"))
 
     del (G)
 
     df = pd.DataFrame(data)
-    df.to_csv("/scratch/jmalloy3/Patents/NetworkStats/stats_cpdsPatents_" +
+    df.to_csv("../../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/networkStats_byMonth_" +
               month + ".csv")
 
 
 def main():
-    updates = build_month_list(1991, 2020)
+    updates = build_month_list(1976, 1979)
 
     #updates = ["1980-01"]
 
@@ -309,7 +313,7 @@ def main():
     #build_master_cpd_date(updates) #NOTE: should only be run once
     #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
 
-    G = pickle.load(file=open("/scratch/jmalloy3/Patents/cpd_patent_G.p", "rb"))
+    G = pickle.load(file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_G_FULL.p", "rb"))
     print(ig.summary(G))
 
     for month in updates:
