@@ -106,7 +106,7 @@ def get_earlier_cpds(month):
         first entry, and igraph index
     """
     #Read in master compound-date-index dataframe
-    master_fp = "../../../mnt/Archive/Shared/PatentData/SureChemBL/Data/Cpd_Data/master_cpd_date_index_df.p"
+    master_fp = "../../../mnt/Archive/Shared/PatentData/SureChemBL/Cpd_Data/master_cpd_date_index_df.p"
     #drive_fp = "G:/Shared drives/SureChemBL_Patents/Cpd_Data/master_cpd_date_index_df.p"
     df = pickle.load(file=open(master_fp, "rb"))
 
