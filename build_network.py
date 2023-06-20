@@ -436,9 +436,12 @@ def build_patent_ID_mapping(updates, fp):
     patents = []
     for update in tqdm(updates):
         if os.path.isfile("../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" + update + ".p"):
-            patent_edges = pickle.load(
-                file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" + update + ".p", "rb"))
-            patents.extend(patent_edges.keys())
+            try:
+                patent_edges = pickle.load(
+                    file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" + update + ".p", "rb"))
+                patents.extend(patent_edges.keys())
+            except EOFError as e:
+                pass
 
     unique_patents = list(set(patents))
     print("Patents from patent edges:", len(patents))
