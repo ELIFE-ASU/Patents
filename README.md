@@ -29,7 +29,7 @@ Tests various fragment hypothesis - number of unique fragments over time (more d
 
 - `assemblyCalcs_cheminformatics.py`
 
-** Outdated ** Calculates molecular weight from sampled compounds (MA is already calculated for these compounds).
+_Outdated_ Calculates molecular weight from sampled compounds (MA is already calculated for these compounds).
 
 Uses RDKit MolDescriptors library to calculate molecular weight
 
@@ -65,15 +65,14 @@ Workhorse script which: finds fragments from MA .txt result files, builds fragme
 
 - `fragment_diversity_parallel.py`
 
-** Outdated ** Failed attempt to parallelize `fragment_diversity.py` - abandoned due to sequencing, since each sampled set of MAs needed to have a specific ordering.
+_Outdated_ Failed attempt to parallelize `fragment_diversity.py` - abandoned due to sequencing, since each sampled set of MAs needed to have a specific ordering.
 
 - `get_MA_results.py`
 
 Takes .txt output files from the AssemblyGo algorithm and stores the label (identifying number/ID of the compound, listed as the first part of the filename), MA value, and time it took for the MA algorithm to complete as a .csv file.
 
 
-
-### Cost Vizualization & Analysis
+### Cost Visualization & Analysis
 
 - `cost_influence.ipynb`
 
@@ -83,7 +82,8 @@ Uses cost data (collected by Hessam Mehr & Dario Caramelli) & MA values to build
 
 Script to merge cost compounds (sampled separately from SureChemBL) with SureChemBL time-series data to build a time-series analysis (results & vizualization found in `cost_influence.ipynb`)
 
-### Network Vizualizations
+
+### Network Visualizations
 
 - `bipartite_network_analysis.ipynb`
 
@@ -95,7 +95,15 @@ Plots describing bipartite network statistics, such as degree distributions & po
 
 - `occurance_viz.ipynb`
 
-** Outdated ** Basic plots representing the occurance of compounds within patents - these were an attempt to see if compounds followed a "rich-get-richer" model, which was found using preferential attachment instead.
+_Outdated_ Basic plots representing the occurance of compounds within patents - these were an attempt to see if compounds followed a "rich-get-richer" model, which was found using preferential attachment instead.
+
+- `pref_attachment_analysis.ipynb`
+
+_Outdated_ Initial attempts to analyze & graph preferential attachment values, given 5-year intervals. Updated code is in `pref_attachment_noNetworks.ipynb`
+
+- `pref_attachment_noNetworks.ipynb`
+
+Calculates & graphs preferential attachment values for compounds over 5-year intervals without loading iGraph networks (uses dictionaries instead). The final version of these graphs are in the preferential attachment manuscript figure. Also tracks individual compound changes over time (e.g., green chemistry compounds) and how preferential attachment changes for specific percentiles of compounds (e.g., how the 99th percentile of compounds changes over time). 
 
 ### Network Analysis
 
@@ -119,18 +127,40 @@ Basic plots & descriptions of PageRank analysis - this was an attempt to track i
 
 Calculates PageRank statistics for all compounds & patents within the SureChemBL networks over months.
 
+
 ### SureChemBL Data
 
 - `cpd_analysis.py`
 
 Samples compounds over months from novel compounds (`sample_compounds_unique()` method) and full database (`sample_compounds` method). Also includes various tests to find the highest degree compounds (see `assemblyCalcs_degrees.py`) and compounds from Llanos et al, 2019, as a hypothesis as to where specific compounds were listed in the database.
 
+- `sample_sanityTesting.ipynb`
 
-### Societal Factors Vizualizations
+Testing to make sure SureChemBL sampling was accurate.
+
+### Societal Factors Visualizations
 
 - `patent_MA_analysis.ipynb`
 
 Workhorse notebook, analyzes changes in MA across authors, assignees, and classifications - also organizes and samples from patent author/assignee/classification lists, as well as performs dropout tests. Various plots from here are found in the SI, and the delta-MA plots are the initial versions of the ones found in the societal factors manuscript figure.
+
+### Societal Factors Analysis
+
+- `patent_authors_assignees.ipynb`
+
+Notebook which scrapes lists of patents for authors & assignees, as well as links patent IDs to compounds. Additionally links compounds with structures and prepares patent data for MA analysis (the results of which are found in `patent_MA_analysis.ipynb`)
+
+- `patent_prefAttach_analysis.ipynb`
+
+_Outdated_ Attempts to link preferential attachment values of compounds to compounds associated with patents & assignees over time. This was replaced by MA values instead.
+
+- `patent_scraping.py`
+
+Scrapes PubChem, using url-based JSON downloads, to find patents associated with randomly selected authors & assignees.
+
+- `reaxys_influence.ipynb`
+
+Initial attempts to use the Reaxys database as a way to measure societal impact on MA changes. Various metrics, such as the number of times a compound is used as a product or reactant, are correlated with MA. This was dropped in favor of the authors/assignees/classifications analysis found in the manuscript.
 
 ## Data
 
