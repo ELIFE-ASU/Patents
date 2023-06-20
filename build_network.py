@@ -719,10 +719,10 @@ def main():
     #Step 2: Update patent-cpd-id files to include patent ids
     #Load cpd-id dictionary - should only be run once
     cpd_id_dict = pickle.load(file=open(
-        "../../mnt/Archive/Shared/PatentData/SureChemBL/Cpd_Data/cpd_ID_index_dict.p",
+        "../../../mnt/Archive/Shared/PatentData/SureChemBL/Cpd_Data/cpd_ID_index_dict.p",
         "rb"))
     patent_id_dict = pickle.load(file=open(
-        "../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_ID_index_dict.p",
+        "../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_ID_index_dict.p",
         "rb"))
 
     print("Num Cpds:", len(cpd_id_dict))
