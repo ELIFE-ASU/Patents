@@ -420,7 +420,7 @@ def build_cpd_ID_mapping(fp):
 
     cpd_dict = dict(zip(unique_cpds, np.arange(0, len(unique_cpds), 1)))
 
-    pickle.dump(cpd_dict, file=open("../../mnt/Archive/Shared/PatentData/SureChemBL/Cpd_Data/cpd_ID_index_dict.p", "wb"))
+    pickle.dump(cpd_dict, file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Cpd_Data/cpd_ID_index_dict.p", "wb"))
 
 
 def build_patent_ID_mapping(updates, fp):
