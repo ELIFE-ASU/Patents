@@ -473,8 +473,11 @@ def replaceIds(updates, fp, cpd_id_dict, patent_id_dict):
     print("Max patent value:", max(patent_id_dict.values()))
 
     for update in tqdm(updates):
-        patent_cpd_edges = pickle.load(
-            file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" + update + ".p", "rb"))
+        try:
+            patent_cpd_edges = pickle.load(
+                file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Edges/patent_cpd_edges_" + update + ".p", "rb"))
+        except EOFError as e:
+                pass
 
         patent_id_edges = {}  #New dictionary to hold patent/id relations
 
