@@ -136,8 +136,8 @@ def build_subgraph(G, month):
 
     #Build subgraph from full igraph subgraph (G.subgraph, include only relevant
     # cpd indicies and ALL PATENTS (to avoid cpd-cpd edges))
-    num_cpds = 21641384  #Numbers from cpd/patent id dicts used to build igraph network
-    num_patents = 4578946
+    num_cpds = 22820274  #Numbers from build_network.py output
+    num_patents = 5136193
 
     #Index list of all compounds present in earlier dates, including all patents
     indicies = df["Index"].tolist() + list(

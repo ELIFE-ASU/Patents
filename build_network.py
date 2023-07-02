@@ -747,7 +747,7 @@ def main():
     print("Num cpds:", len(cpd_id_dict))
     print("Num patents:", len(patent_id_dict))
 
-    build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
+    # build_full_bipartite_network(edgelist, cpd_id_dict, patent_id_dict)
     #
     # Step 5: Add cpd names & patent ids
 
