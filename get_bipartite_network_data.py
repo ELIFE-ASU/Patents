@@ -146,7 +146,7 @@ def build_subgraph(G, month):
     indicies = [x for x in indicies if x != -1]
 
     G_sub = G.subgraph(indicies)
-    print(ig.summary(G_sub))
+    # print(ig.summary(G_sub))
 
     pickle.dump(
         G_sub,
@@ -316,7 +316,7 @@ def main():
     G = pickle.load(file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_G.p", "rb"))
     print(ig.summary(G))
 
-    for month in updates:
+    for month in tqdm(updates):
         G_sub = build_subgraph(G, month)
 
         #2: Network stats over these subgraphs (not immediately necessary)
