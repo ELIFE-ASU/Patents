@@ -352,13 +352,13 @@ def get_MAs_of_patents(profile_patent_timestamps, avg_cpds_per_patent,
                                                   MA_month_std_dict,
                                                   math.floor(n_cpds)))
             
-        print(f"\tTesting: profile size = {len(profile)}, avg MAs[0:10] = {avg_MAs[0:10]}")
-        print(f"\tn_cpds_per_profile = {len(n_cpds_per_profile)}, avg_cpds_per_patent: {avg_cpds_per_patent}")
+        # print(f"\tTesting: profile size = {len(profile)}, avg MAs[0:10] = {avg_MAs[0:10]}")
+        # print(f"\tn_cpds_per_profile = {len(n_cpds_per_profile)}, avg_cpds_per_patent: {avg_cpds_per_patent}")
 
         profile_avg_MAs.append(avg_MAs)
         profile_cpds_per_patent.append(n_cpds_per_profile)
 
-    print(f"Found {len(profile_avg_MAs)} MA values: {profile_avg_MAs[0:10]}\n")
+    print(f"Found {len(profile_avg_MAs)} MA values: {profile_avg_MAs[0][0:10]}\n")
 
     return profile_avg_MAs, profile_cpds_per_patent
 
@@ -424,15 +424,27 @@ def main():
     avg_patents_per_assignee, stdev_patents_per_assignee, avg_months_per_assignee, stdev_months_per_assignee = patent_stats_per_assignee(
         results_df)
 
+    print(f"Avg Patents Per Assignee: {avg_patents_per_assignee}\n"
+            f"Stdev Patents Per Assignee: {stdev_patents_per_assignee}\n"
+            f"Avg Months Per Assignee: {avg_months_per_assignee}\n"
+            f"Stdev Months Per Assignee: {stdev_months_per_assignee}")
+    print("\n" + " - " * 20 + "\n")
+
     num_profiles = 769
 
     random_profile_sizes = build_profiles(avg_patents_per_assignee,
                                           stdev_patents_per_assignee,
                                           num_profiles)
 
+    print(f"Random profile sizes: {random_profile_sizes[0:10]}")
+    print("\n" + " - " * 20 + "\n")
+
     random_profile_timestamps = get_timestamps(avg_months_per_assignee,
                                                stdev_months_per_assignee,
                                                num_profiles)
+
+    print(f"Random profile timestamps: {random_profile_timestamps[0:10]}")
+    print("\n" + " - " * 20 + "\n")
 
     profile_patent_timestamps = get_all_profile_patent_timestamps(
         random_profile_sizes, random_profile_timestamps)
