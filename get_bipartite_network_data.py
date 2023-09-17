@@ -35,7 +35,7 @@ def build_master_cpd_date(updates):
     Args:
         updates (list): list of all months in a certain range
     """
-    fp = "G:/Shared drives/SureChemBL_Patents/"
+    fp = "../../../mnt/Archive/Shared/PatentData/SureChemBL/"
 
     master_cpd_date_dict = {}
 
@@ -68,8 +68,8 @@ def link_ids_cpds(fp):
         None, writes a master dataframe containing SureChemBL cpd ids, dates, and indicies to
         /Cpd_Data in GDrive
     """
-    cpd_date_df = pickle.load(file=open(fp + "master_cpd_date_df.p", "rb"))
-    cpd_ID_index_dict = pickle.load(file=open(fp + "cpd_ID_index_dict.p", "rb"))
+    cpd_date_df = pickle.load(file=open(fp + "Cpd_Data/master_cpd_date_df.p", "rb"))
+    cpd_ID_index_dict = pickle.load(file=open(fp + "Cpd_Data/cpd_ID_index_dict.p", "rb"))
 
     indicies = []
     for index, row in tqdm(cpd_date_df.iterrows(), total=cpd_date_df.shape[0]):
@@ -79,7 +79,7 @@ def link_ids_cpds(fp):
             indicies.append(-1)
 
     cpd_date_df["Index"] = indicies
-    pickle.dump(cpd_date_df, file=open(fp + "master_cpd_date_index_df.p", "wb"))
+    pickle.dump(cpd_date_df, file=open(fp + "Cpd_Data/master_cpd_date_index_df.p", "wb"))
 
 
 def check_indicies(df):
@@ -303,18 +303,23 @@ def get_network_stats(G, month):
 
 
 def main():
-    updates = build_month_list(1997, 2022)
-
-    #updates = ["1980-01"]
+    #Updates for full cpd_date_dict to be built again
+    updates = build_month_list(1962, 2022)
 
     #1: Build subgraphs of patents/compounds present before a specific date
 
     #1a: Link date of first entry & index of compounds
-    #build_master_cpd_date(updates) #NOTE: should only be run once
-    #link_ids_cpds("G:/Shared drives/SureChemBL_Patents/Cpd_Data/") #NOTE: should only be run once
+    print("--- Building master compound-index dictionary ---")
+    build_master_cpd_date(updates) #NOTE: should only be run once
+    link_ids_cpds("../../../mnt/Archive/Shared/PatentData/SureChemBL/") #NOTE: should only be run once
+    print("--- Completed master compound-index dictionary ---")
+
+
+    #Updates for network statistics
+    updates = build_month_list(2020, 2022)
 
     G = pickle.load(file=open("../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/cpd_patent_G.p", "rb"))
-    print(ig.summary(G))
+    print("Loaded G\n", ig.summary(G))
 
     for month in tqdm(updates):
         G_sub = build_subgraph(G, month)
