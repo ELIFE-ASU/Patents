@@ -42,7 +42,7 @@ def build_master_cpd_date(updates):
     #Find all compounds belonging to a specific month
     for update in tqdm(updates):
         cpd_date_dict = pickle.load(
-            file=open(fp + "CpdPatentIdsDates/cpd_date_dict_" + update +
+            file=open(fp + "CpdPatentIdsDates/Cpd_Date_Dict/cpd_date_dict_" + update +
                       ".p", "rb"))
 
         for cpd in cpd_date_dict.keys():
