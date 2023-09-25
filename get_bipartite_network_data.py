@@ -309,10 +309,10 @@ def main():
     #1: Build subgraphs of patents/compounds present before a specific date
 
     #1a: Link date of first entry & index of compounds
-    print("--- Building master compound-index dictionary ---")
-    build_master_cpd_date(updates) #NOTE: should only be run once
-    link_ids_cpds("../../../mnt/Archive/Shared/PatentData/SureChemBL/") #NOTE: should only be run once
-    print("--- Completed master compound-index dictionary ---")
+    # print("--- Building master compound-index dictionary ---")
+    # build_master_cpd_date(updates) #NOTE: should only be run once
+    # link_ids_cpds("../../../mnt/Archive/Shared/PatentData/SureChemBL/") #NOTE: should only be run once
+    # print("--- Completed master compound-index dictionary ---")
 
 
     #Updates for network statistics
