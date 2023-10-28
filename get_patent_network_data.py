@@ -45,6 +45,7 @@ def save_dataframe(months, total_patents, new_patents, avg_degree):
 
 def main():
     graph_fps = get_graph_fps()
+    graph_fps.sort()
 
     months, total_patents, new_patents, avg_degree = get_patent_stats(graph_fps)
 
