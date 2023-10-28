@@ -16,7 +16,7 @@ def get_patent_stats(fps):
     months = []
 
     for f in fps:
-        print(f"Analyzing {f.split("_")[-1].split(".")[0]}...")
+        print(f"Analyzing {f}...")
 
         months.append(f.split("_")[-1].split(".")[0])
 
