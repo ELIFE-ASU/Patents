@@ -44,7 +44,7 @@ def save_dataframe(months, total_patents, new_patents, avg_degree):
     df.to_csv("../../../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/patent_stats_updated.csv")
 
 def main():
-    graphs_fps = get_graph_fps()
+    graph_fps = get_graph_fps()
 
     months, total_patents, new_patents, avg_degree = get_patent_stats(graph_fps)
 
