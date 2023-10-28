@@ -6,7 +6,7 @@ import re
 import pandas as pd
 
 def get_graph_fps():
-    return ["../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/"+fp for fp in os.listdir("../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs") if re.match(r'^cpd_patent_[0-9]', f)]
+    return ["../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/"+fp for fp in os.listdir("../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs") if re.match(r'^cpd_patent_[0-9]', fp)]
 
 
 def get_patent_stats(fps):
