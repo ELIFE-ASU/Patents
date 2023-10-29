@@ -5,34 +5,60 @@ import os
 import re
 import pandas as pd
 
-def get_graph_fps():
-    return ["../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs/"+fp for fp in os.listdir("../../../../mnt/Archive/Shared/PatentData/SureChemBL/Graphs") if re.match(r'^cpd_patent_[0-9]', fp)]
+def build_month_list(start, end):
+    """ Builds a list of all months in a given range
 
+    Args:
+        start (int): year describing the start of the data
+        end (int): year describing the end of the data (inclusive)
 
-def get_patent_stats(fps):
+    Returns:
+        list: list of all update months in format "YYYY-MM"
+    """
+    updates = []
+    for year in range(start, end + 1):  # all years through the given end
+        for month in range(1, 13):  #include 12 months
+            if month < 10:
+                updates.append(str(year) + "-0" + str(month))
+            else:
+                updates.append(str(year) + "-" + str(month))
+
+    return updates
+
+def get_pickled_files(month):
+    patent_date_dict =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_date_dict_" + month + ".p", "rb"))
+    patent_cpd_edges =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_cpd_edges_" + month + ".p", "rb"))
+
+    return patent_date_dict, patent_cpd_edges
+
+def get_patent_stats():
     total_patents = []
     new_patents = []
     avg_degree = []
     months = []
 
-    for f in fps:
-        print(f"Analyzing {f}...")
+    for month in build_month_list(1976, 2022):
+        print(f"Analyzing {month}...")
 
-        months.append(f.split("_")[-1].split(".")[0])
+        months.append(month)
 
-        G = pickle.load(open(f, "rb"))
-        G_patents = G.vs(type=1)
+        patent_date_dict, patent_cpd_edges = get_pickled_files(month)
 
-        total_patents.append(len(G_patents.select(_degree_gt=0)))
-
-        if new_patents:
-            new_patents.append(total_patents[-1] - total_patents[-2])
+        n_patents = len(patent_date_dict.keys())
+        new_patents.append(n_patents)
+                                            
+        if total_patents:
+            total_patents.append(n_patents + total_patents[-1])
         else:
-            new_patents.append(total_patents[-1])
+            total_patents.append(n_patents)
 
-        avg_degree.append(np.mean(G.degree(G_patents.select(_degree_gt=0))))
+        degrees = []
+        for _, cpds in patent_cpd_edges.items():
+            degrees.append(len(cpds))
 
-    return months, total_patents, new_patents, avg_degree
+        avg_degree.append(np.mean(degrees))
+
+        return months, total_patents, new_patents, avg_degree
 
 def save_dataframe(months, total_patents, new_patents, avg_degree):
     df = pd.DataFrame(
@@ -41,13 +67,10 @@ def save_dataframe(months, total_patents, new_patents, avg_degree):
      'new_patents': new_patents,
      'avg_degree': avg_degree
     })
-    df.to_csv("../../../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/patent_stats_updated.csv")
+    df.to_csv("../../../../mnt/Archive/Shared/PatentData/SureChemBL/NetworkStats/patent_stats_updatedv2.csv")
 
 def main():
-    graph_fps = get_graph_fps()
-    graph_fps.sort()
-
-    months, total_patents, new_patents, avg_degree = get_patent_stats(graph_fps)
+    months, total_patents, new_patents, avg_degree = get_patent_stats()
 
     save_dataframe(months, total_patents, new_patents, avg_degree)
 
