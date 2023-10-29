@@ -26,8 +26,8 @@ def build_month_list(start, end):
     return updates
 
 def get_pickled_files(month):
-    patent_date_dict =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_date_dict_" + month + ".p", "rb"))
-    patent_cpd_edges =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/patent_cpd_edges_" + month + ".p", "rb"))
+    patent_date_dict =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Date_Dict/patent_date_dict_" + month + ".p", "rb"))
+    patent_cpd_edges =  pickle.load(open("../../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Patent_Cpd_Dict/patent_cpd_edges_" + month + ".p", "rb"))
 
     return patent_date_dict, patent_cpd_edges
 
