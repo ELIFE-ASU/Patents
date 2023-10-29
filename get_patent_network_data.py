@@ -63,7 +63,7 @@ def get_patent_stats():
             new_patents.append(n_patents)
 
             if total_patents:
-                if total_patents[-1] != np.nan:
+                if total_patents[-1]:
                     total_patents.append(n_patents + total_patents[-1])
                 else:
                     total_patents.append(n_patents + total_patents[-2])
