@@ -63,15 +63,12 @@ def get_patent_stats():
             new_patents.append(n_patents)
 
             if total_patents:
-                if total_patents[-1]:
-                    total_patents.append(n_patents + total_patents[-1])
-                else:
-                    total_patents.append(n_patents + total_patents[-2])
+                total_patents.append(n_patents + total_patents[-1])
             else:
                 total_patents.append(n_patents)
         else:
             new_patents.append(np.nan)
-            total_patents.append(np.nan)
+            total_patents.append(total_patents[-1])
 
         if patent_cpd_edges:
             degrees = []
