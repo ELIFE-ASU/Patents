@@ -58,7 +58,7 @@ def get_patent_stats():
 
         avg_degree.append(np.mean(degrees))
 
-        return months, total_patents, new_patents, avg_degree
+    return months, total_patents, new_patents, avg_degree
 
 def save_dataframe(months, total_patents, new_patents, avg_degree):
     df = pd.DataFrame(
