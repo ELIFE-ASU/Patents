@@ -84,10 +84,9 @@ def main():
             novel_frag_counts.append(len(full_frags))
             with open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_{month}_updated.p", "wb") as f:
                 pickle.dump(full_frags, f)
-            break
-
-        all_frags, monthly_novel_frag_count = check_iso(full_frags, all_frags, month)
-        novel_frag_counts.append(monthly_novel_frag_count)
+        else:
+            all_frags, monthly_novel_frag_count = check_iso(full_frags, all_frags, month)
+            novel_frag_counts.append(monthly_novel_frag_count)
 
     print(novel_frag_counts)
     with open("../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_count_updated.p", "wb") as f:
