@@ -188,6 +188,7 @@ def main():
     escolor_map = {}
 
     for month in months:
+        new_frag_count = 0
         print("--- Analyzing", month, "---")
 
         # #Old newdatabase code
