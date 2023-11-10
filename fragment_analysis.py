@@ -76,7 +76,7 @@ def main():
     
     for month in tqdm(months):
         #Load full fragments for each month
-        full_frags = pickle.load(f"~/../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/fullFrags_{month}.p", "rb")
+        full_frags = pickle.load(open(f"~/../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/fullFrags_{month}.p", "rb"))
 
         #If Jan 1976, all fragments is full fragment list
         if month=="1976-01":
