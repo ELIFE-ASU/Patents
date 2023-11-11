@@ -261,7 +261,7 @@ def count_cpds(months):
         unique_cpds = pickle.load(open(f"/../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Unique_Cpds/unique_cpds_{month}.p", "rb"))
         all_cpds = list(set(all_cpds + unique_cpds))
         
-    print(f"Total cpds, 1962-1979: f{len(all_cpds)}")
+    print(f"Total cpds, 1962-1979: {len(all_cpds)}")
 
 def main():
     # # ### Highest Degree compounds ###
