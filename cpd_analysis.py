@@ -287,7 +287,7 @@ def main():
     ### Counting Stats (for SI) ###
 
     ## Get all cpds before 1980
-    count_cpds(build_month_increments(1962-1979))
+    count_cpds(build_month_increments(1962,1979))
 
 
 if __name__ == "__main__":
