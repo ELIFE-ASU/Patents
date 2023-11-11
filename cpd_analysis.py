@@ -253,15 +253,23 @@ def sample_compounds(n, months, cpd_df):
     print("\n----- Saving Data -----")
     pickle.dump(sample_inchis,
                 file=open("Data/sample_inchi_" + str(n) + "_1976-1979.p", "wb"))
+    
 
+def count_cpds(months):
+    all_cpds = []
+    for month in months:
+        unique_cpds = pickle.load(open(f"/../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Unique_Cpds/unique_cpds_{month}.p", "rb"))
+        all_cpds = list(set(all_cpds + unique_cpds))
+        
+    print(f"Total cpds, 1962-1979: f{len(all_cpds)}")
 
 def main():
-    # ### Highest Degree compounds ###
-    data_fp = "/Volumes/Macintosh HD 4/SureChemBL/Cpd_Data/"
-    # build_cpd_df(data_fp)  #NOTE: only needs to be run once
+    # # ### Highest Degree compounds ###
+    # data_fp = "/Volumes/Macintosh HD 4/SureChemBL/Cpd_Data/"
+    # # build_cpd_df(data_fp)  #NOTE: only needs to be run once
 
-    cpd_df = pickle.load(file=open(data_fp + "SureChemBL_allCpds.p", "rb"))
-    print(cpd_df.columns)
+    # cpd_df = pickle.load(file=open(data_fp + "SureChemBL_allCpds.p", "rb"))
+    # print(cpd_df.columns)
 
     # ### Statistics over highest degree compounds ###
     # n = 1000  #Number of compounds to find
@@ -272,11 +280,14 @@ def main():
     # ### Testing Llanos et al (2019) compounds ###
     # find_llanos_cpds(data_fp, cpd_df)
 
-    ### Sampling compounds for MA analysis ###
-    sample_compounds_unique(1000, build_month_increments(1976, 1979), cpd_df)
-    sample_compounds(1000, build_month_increments(1976, 1979), cpd_df)
+    # ### Sampling compounds for MA analysis ###
+    # sample_compounds_unique(1000, build_month_increments(1976, 1979), cpd_df)
+    # sample_compounds(1000, build_month_increments(1976, 1979), cpd_df)
 
-    ### MA Analysis ###
+    ### Counting Stats (for SI) ###
+
+    ## Get all cpds before 1980
+    count_cpds(build_month_increments(1962-1979))
 
 
 if __name__ == "__main__":
