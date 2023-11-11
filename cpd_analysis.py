@@ -295,8 +295,8 @@ def main():
     ### Counting Stats (for SI) ###
 
     ## Get all cpds before 1980
-    print("---- Novel cpds, 1963-1979 ----")
-    count_novel_cpds(build_month_increments(1963,1979))
+    print("---- Novel cpds, 1963-1971 ----")
+    count_novel_cpds(build_month_increments(1963,1971))
     print("---- Novel cpds, 1990-01 ----")
     count_novel_cpds(["1990-01"])
 
