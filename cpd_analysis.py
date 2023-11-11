@@ -255,13 +255,21 @@ def sample_compounds(n, months, cpd_df):
                 file=open("Data/sample_inchi_" + str(n) + "_1976-1979.p", "wb"))
     
 
-def count_cpds(months):
+def count_unique_cpds(months):
     all_cpds = []
     for month in months:
         unique_cpds = pickle.load(open(f"/../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Unique_Cpds/unique_cpds_{month}.p", "rb"))
         all_cpds = list(set(all_cpds + unique_cpds))
         
-    print(f"Total cpds, 1962-1979: {len(all_cpds)}")
+    print(f"Total cpds: {len(all_cpds)}")
+
+def count_novel_cpds(months):
+    all_cpds = []
+    for month in months:
+        unique_cpds = pickle.load(open(f"/../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/New_Ids/newIds_updated_{month}.p", "rb"))
+        all_cpds = list(set(all_cpds + unique_cpds))
+        
+    print(f"Total novel cpds: {len(all_cpds)}")
 
 def main():
     # # ### Highest Degree compounds ###
@@ -287,7 +295,10 @@ def main():
     ### Counting Stats (for SI) ###
 
     ## Get all cpds before 1980
-    count_cpds(build_month_increments(1962,1979))
+    print("---- Novel cpds, 1962-1979 ----")
+    count_novel_cpds(build_month_increments(1962,1979))
+    print("---- Novel cpds, 1990-01 ----")
+    count_novel_cpds(["1990-01"])
 
 
 if __name__ == "__main__":
