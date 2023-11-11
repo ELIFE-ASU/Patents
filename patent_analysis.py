@@ -27,7 +27,7 @@ def count_cpds(months):
     all_patents = []
     for month in tqdm(months):
         unique_patents = pickle.load(open(f"/../../../mnt/Archive/Shared/PatentData/SureChemBL/CpdPatentIdsDates/Unique_Patents/unique_patents_{month}.p", "rb"))
-        all_patents = list(set(all_patents + unique_unique_patentscpds))
+        all_patents = list(set(all_patents + unique_patents))
         
     print(f"Total patents, 1962-1979: {len(all_patents)}")
 
