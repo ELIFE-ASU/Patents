@@ -33,6 +33,89 @@ def get_list(line):
 
     return [line[0] + "s", values]
 
+# Depth-first search (DFS). Choose a vertex, go to neighbors, collect info, repeat for neighbors...
+def explore_component_dfs(graph, vertex, visited, component_vertices, component_edges, component_vertex_colors, component_edge_colors):
+
+    vertex_index = vertex.index
+    visited.add(vertex_index)
+    component_vertices.append(vertex_index) 
+    
+    # Grab vertex colors
+    vertex_color = graph.vs[vertex_index]["color"]
+    component_vertex_colors.append(vertex_color)
+
+    for neighbor_index in graph.neighbors(vertex):
+        neighbor_vertex = graph.vs[neighbor_index]
+        if neighbor_index not in visited:
+            component_edges.append((vertex_index, neighbor_index))
+    
+            # Grab edge colors
+            edge_id = graph.get_eid(vertex_index, neighbor_index) # Get the edge ID given indices of endpoints
+            edge_color = graph.es[edge_id]["color"]
+            component_edge_colors.append(edge_color)
+
+            # Sweet, sweet recursivity 
+            explore_component_dfs(graph, neighbor_vertex, visited, component_vertices, component_edges, component_vertex_colors, component_edge_colors)
+
+
+# Collecting graph properties of a component
+def dfs(graph, start_vertex):
+    visited = set()
+    component_vertices = []
+    component_edges = []
+    component_vertex_colors = []
+    component_edge_colors = []
+
+    explore_component_dfs(graph, start_vertex, visited, component_vertices, component_edges, component_vertex_colors, component_edge_colors)
+
+    return component_vertices, component_edges, component_vertex_colors, component_edge_colors
+
+
+# From a graph component, create an igraph object
+def create_igraph_component(component_vertices, component_edges, component_vertex_colors, component_edge_colors):
+    
+    # Create a new igraph object
+    g = ig.Graph()
+
+    # Add vertices to the graph
+    g.add_vertices(component_vertices)
+
+    # Because vertices reset starting at 0 when new graph is made, 
+    # map original indices from parent graph to new indices, starting at 0. 
+    vertex_ids = g.vs['name']
+    indices = range(len(vertex_ids))
+    vertex_dict = dict(zip(vertex_ids, indices))
+
+    # Convert component edges with new vertices
+    new_component_edges = [(vertex_dict[edge[0]], vertex_dict[edge[1]]) for edge in component_edges]
+    
+    # Add edges to the graph
+    g.add_edges(new_component_edges)
+
+    # Set vertex colors
+    g.vs["color"] = component_vertex_colors
+
+    # Set edge colors
+    g.es["color"] = component_edge_colors
+
+    return g
+
+# Gather all graphs in the remnant disjointed graph
+def get_remnant_fragments(graph):
+    og_components = []
+    remnant_fragments = []
+    visited = set()
+
+    for vertex in graph.vs:
+        if vertex.index not in visited:
+            component_vertices, component_edges, component_vertex_colors, component_edge_colors = dfs(graph, vertex)
+            og_components.append((component_vertices, component_edges, component_vertex_colors, component_edge_colors))
+            component_igraph = create_igraph_component(component_vertices, component_edges, component_vertex_colors, component_edge_colors)
+            remnant_fragments.append(component_igraph)
+            visited.update(component_vertices)
+            
+    return remnant_fragments
+
 
 def build_fragment(start, end, lines, vscolor_map, escolor_map):
     """ Builds an igraph graph of a single fragment
@@ -230,9 +313,8 @@ def main():
 
                 if lines[i] == 'Remnant Graph':
                     # i+1 is the start of fragment definition,
-                    fragments.append(
-                        build_fragment(i + 1, i + 5, lines, vscolor_map,
-                                       escolor_map))
+                    remnant_graph = build_fragment(i + 1, i + 5, lines, vscolor_map, escolor_map)
+                    fragments.extend(get_remnant_fragments(remnant_graph))
 
             ## More testing - check isomorphism within a single output file
             all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
