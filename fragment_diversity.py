@@ -167,11 +167,9 @@ def get_files(fp, labels):
                     fps.append(fp + dataSource + label + ".txt")
                     break
         elif label.endswith("_new"):
-            fps.append(fp + "NewDatabase_Done/"+ label[:-4] +
-                       ".txt")
+            fps.append(fp + "NewDatabase_Done/" + label[:-4] + ".txt")
         elif label.endswith("_full"):
-            fps.append(fp + "FullDatabase_Done/" + label[:-5] +
-                       ".txt")
+            fps.append(fp + "FullDatabase_Done/" + label[:-5] + ".txt")
 
     return fps
 
@@ -179,7 +177,7 @@ def get_files(fp, labels):
 def main():
     ### Using all completed MAs to build fragments
     MA_df_completed = pd.read_csv(
-        "Data/AssemblyValues/ALLSAMPLEDcpds_AssemblyGo_COMPLETED.csv")
+        "AssemblyValues/ALLSAMPLEDcpds_AssemblyGo_COMPLETED.csv")
 
     months = build_month_increments(1976, 2022)
 
@@ -201,14 +199,13 @@ def main():
         frag_count = {}
 
         ## Sample month compounds
-        month_df = MA_df_completed[MA_df_completed["earliest_date"].str.startswith(
-            month)]
+        month_df = MA_df_completed[
+            MA_df_completed["earliest_date"].str.startswith(month)]
         n = 1000
         if len(month_df) > n:
             month_df = month_df.sample(n)
 
-        files = get_files("Data/AssemblyValues/", list(month_df["label"]))
-
+        files = get_files("AssemblyValues/", list(month_df["label"]))
 
         #Store ids (for agave parallelization)
         all_IDs["month"] = files
@@ -229,7 +226,13 @@ def main():
                         #i+1 is the start of the fragment definition, i+5 is the end
                         fragments.append(
                             build_fragment(i + 1, i + 5, lines, vscolor_map,
-                                        escolor_map))
+                                           escolor_map))
+
+                if lines[i] == 'Remnant Graph':
+                    # i+1 is the start of fragment definition,
+                    fragments.append(
+                        build_fragment(i + 1, i + 5, lines, vscolor_map,
+                                       escolor_map))
 
             ## More testing - check isomorphism within a single output file
             all_frags, frag_count = check_iso(fragments, all_frags, frag_count)
@@ -240,12 +243,28 @@ def main():
 
         print("\n")
 
-        pickle.dump(all_frags, file=open("Data/AssemblyValues/Fragments/fullFrags_" + month + ".p", "wb"))
-        pickle.dump(frag_count, file=open("Data/AssemblyValues/Fragments/fullFragsCount_" + month + ".p", "wb"))
+        pickle.dump(all_frags,
+                    file=open(
+                        "AssemblyValues/Fragments/fullFrags_" + month +
+                        "_withRemnants.p", "wb"))
+        pickle.dump(frag_count,
+                    file=open(
+                        "AssemblyValues/Fragments/fullFragsCount_" +
+                        month + "_withRemnants.p", "wb"))
 
-    pickle.dump(all_IDs, file=open("Data/AssemblyValues/Fragments/all_ids_updated.p", "wb"))
-    pickle.dump(vscolor_map, file=open("Data/AssemblyValues/Fragments/vscolor_map.p", "wb"))
-    pickle.dump(escolor_map, file=open("Data/AssemblyValues/Fragments/escolor_map.p", "wb"))
+    pickle.dump(
+        all_IDs,
+        file=open(
+            "AssemblyValues/Fragments/all_ids_updated_withRemnants.p",
+            "wb"))
+    pickle.dump(vscolor_map,
+                file=open(
+                    "AssemblyValues/Fragments/vscolor_map_withRemnants.p",
+                    "wb"))
+    pickle.dump(escolor_map,
+                file=open(
+                    "AssemblyValues/Fragments/escolor_map_withRemnants.p",
+                    "wb"))
 
     print(vscolor_map)
     print(escolor_map)
