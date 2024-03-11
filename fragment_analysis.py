@@ -60,7 +60,7 @@ def check_iso(candidate_fragments, all_frags, month):
             novel_frag_count += 1
 
     #Write novel fragments to a pickle file
-    with open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_{month}_updated.p", "wb") as f:
+    with open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_{month}_withRemnants.p", "wb") as f:
         pickle.dump(novel_frags, f)
 
     #Return updated full list
@@ -76,20 +76,20 @@ def main():
     
     for month in tqdm(months):
         #Load full fragments for each month
-        full_frags = pickle.load(open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/fullFrags_{month}.p", "rb"))
+        full_frags = pickle.load(open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/fullFrags_{month}_withRemnants.p", "rb"))
 
         #If Jan 1976, all fragments is full fragment list
         if month=="1976-01":
             all_frags = full_frags
             novel_frag_counts.append(len(full_frags))
-            with open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_{month}_updated.p", "wb") as f:
+            with open(f"../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_{month}_withRemnants.p", "wb") as f:
                 pickle.dump(full_frags, f)
         else:
             all_frags, monthly_novel_frag_count = check_iso(full_frags, all_frags, month)
             novel_frag_counts.append(monthly_novel_frag_count)
 
     print(novel_frag_counts)
-    with open("../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_count_updated.p", "wb") as f:
+    with open("../../../mnt/Archive/Shared/PatentData/SureChemBL/AssemblyValues/Fragments/NewFrags/newFrags_count_withRemnants.p", "wb") as f:
         pickle.dump(novel_frag_counts, f)
 
         
